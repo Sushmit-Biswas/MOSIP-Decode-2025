@@ -1,6 +1,7 @@
 import React from 'react';
 import { Camera, Save, User, Calendar, Scale, Ruler, AlertCircle } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
+import apiService from '../services/apiService';
 import { useNavigate } from 'react-router-dom';
 
 const ChildForm = () => {
@@ -107,21 +108,45 @@ const ChildForm = () => {
 
     try {
       const healthId = generateHealthId();
+      const location = await getCurrentLocation();
+      
       const record = {
         ...formData,
         healthId,
         id: Date.now(),
         timestamp: new Date().toISOString(),
-        uploaded: false,
         representativeId: 'current_user', // This would come from auth context
-        location: await getCurrentLocation(),
+        location,
+        uploaded: false // Will be set to true if successfully saved to server
       };
 
-      // Save to IndexedDB
+      // Try to save to server if online
+      const isOnline = navigator.onLine;
+      let serverSaveSuccess = false;
+
+      if (isOnline) {
+        try {
+          const response = await apiService.createChild(record);
+          if (response.success) {
+            record.uploaded = true;
+            record.serverId = response.data._id;
+            serverSaveSuccess = true;
+            console.log('✅ Record saved to server');
+          }
+        } catch (serverError) {
+          console.log('❌ Server save failed, will save locally:', serverError.message);
+        }
+      }
+
+      // Always save to IndexedDB for offline access
       await childHealthDB.saveChildRecord(record);
 
       // Show success message with Health ID
-      alert(`✅ Child record saved successfully!\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`);
+      const statusMessage = serverSaveSuccess 
+        ? '✅ Child record saved successfully and uploaded to server!'
+        : '✅ Child record saved locally! It will sync when internet is available.';
+      
+      alert(`${statusMessage}\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`);
       
       // Reset form
       setFormData({

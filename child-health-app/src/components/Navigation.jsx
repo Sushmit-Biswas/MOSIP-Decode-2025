@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, Plus, List, Upload, Wifi, WifiOff } from 'lucide-react';
+import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3 } from 'lucide-react';
 
 const Navigation = () => {
   const location = useLocation();
@@ -24,6 +24,8 @@ const Navigation = () => {
     { path: '/add-child', icon: Plus, label: 'Add Child' },
     { path: '/records', icon: List, label: 'Records' },
     { path: '/sync', icon: Upload, label: 'Sync' },
+    { path: '/admin', icon: Settings, label: 'Admin' },
+    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   ];
 
   return (
@@ -37,20 +39,23 @@ const Navigation = () => {
             </div>
             
             <div className="hidden md:flex space-x-4">
-              {navItems.map(({ path, icon: Icon, label }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    location.pathname === path
-                      ? 'bg-primary-100 text-primary-700'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
-                </Link>
-              ))}
+              {navItems.map(({ path, icon: IconComponent, label }) => {
+                const isActive = location.pathname === path;
+                return (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <IconComponent className="h-4 w-4" />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
 

@@ -1,6 +1,5 @@
 import childHealthDB from './indexedDB';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import apiService from './apiService';
 
 class SyncService {
   constructor() {
@@ -27,6 +26,7 @@ class SyncService {
 
   setAuthToken(token) {
     this.authToken = token;
+    apiService.setAuthToken(token);
   }
 
   async autoSync() {
@@ -55,7 +55,9 @@ class SyncService {
     this.syncInProgress = true;
 
     try {
-      const pendingItems = await childHealthDB.getPendingSyncItems();
+      const PENDING_ITEMS = await childHealthDB.getPendingSyncItems();
+      console.log(`Found ${PENDING_ITEMS.length} pending sync items`);
+      
       const pendingRecords = await childHealthDB.getAllChildRecords()
         .then(records => records.filter(r => !r.uploaded));
 
@@ -117,27 +119,13 @@ class SyncService {
 
   async uploadBatch(records) {
     try {
-      const response = await fetch(`${API_BASE_URL}/sync/upload`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.authToken}`
-        },
-        body: JSON.stringify({
-          records: records.map(r => ({
-            ...r,
-            localId: r.id // Keep local ID for reference
-          })),
-          batchId: Date.now(),
-          timestamp: new Date().toISOString()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const result = await apiService.uploadRecords(records, this.authToken);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Upload failed');
       }
 
-      return await response.json();
+      return result;
     } catch (error) {
       console.error('❌ Upload batch failed:', error);
       throw error;
@@ -150,17 +138,7 @@ class SyncService {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-          'Authorization': this.authToken ? `Bearer ${this.authToken}` : undefined
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.request(endpoint);
     } catch (error) {
       console.error(`❌ Failed to fetch ${endpoint}:`, error);
       throw error;
@@ -169,19 +147,7 @@ class SyncService {
 
   async authenticateWithESignet(nationalId, otp) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/esignet`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ nationalId, otp })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Authentication failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const result = await apiService.authenticateWithESignet(nationalId, otp);
       
       if (result.success) {
         this.setAuthToken(result.data.token);
@@ -207,19 +173,7 @@ class SyncService {
 
   async sendOTP(nationalId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/send-otp`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ nationalId })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to send OTP: ${response.statusText}`);
-      }
-
-      return await response.json();
+      return await apiService.sendOTP(nationalId);
     } catch (error) {
       console.error('❌ Failed to send OTP:', error);
       throw error;
@@ -229,12 +183,8 @@ class SyncService {
   // Check server connectivity
   async checkServerConnection() {
     try {
-      const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
-        method: 'GET',
-        timeout: 5000
-      });
-      return response.ok;
-    } catch (error) {
+      return await apiService.checkHealth();
+    } catch {
       return false;
     }
   }

@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import ChildForm from './pages/ChildForm';
 import RecordsList from './pages/RecordsList';
 import Sync from './pages/Sync';
+import AdminPortal from './pages/AdminPortal';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
             <Route path="/add-child" element={<ChildForm />} />
             <Route path="/records" element={<RecordsList />} />
             <Route path="/sync" element={<Sync />} />
+            <Route path="/admin" element={<AdminPortal />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
           </Routes>
         </main>
       </div>
