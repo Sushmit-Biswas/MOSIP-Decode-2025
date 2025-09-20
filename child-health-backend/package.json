@@ -8,7 +8,12 @@
     "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["child-health", "api", "mosip", "esignet"],
+  "keywords": [
+    "child-health",
+    "api",
+    "mosip",
+    "esignet"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -21,7 +26,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
     "morgan": "^1.10.1",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
