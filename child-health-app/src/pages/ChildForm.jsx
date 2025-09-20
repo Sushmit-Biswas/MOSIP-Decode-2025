@@ -23,6 +23,9 @@ const ChildForm = () => {
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [validationErrors, setValidationErrors] = React.useState({});
+  const [locationData, setLocationData] = React.useState(null);
+  const [isCapturingLocation, setIsCapturingLocation] = React.useState(false);
+  const [locationError, setLocationError] = React.useState(null);
 
   React.useEffect(() => {
     // Initialize IndexedDB when component mounts
@@ -63,12 +66,6 @@ const ChildForm = () => {
     }
   };
 
-  const generateHealthId = () => {
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substr(2, 5).toUpperCase();
-    return `CHR${timestamp}${randomStr}`;
-  };
-
   const validateForm = () => {
     const errors = {};
 
@@ -100,18 +97,40 @@ const ChildForm = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const captureLocation = async () => {
+    setIsCapturingLocation(true);
+    setLocationError(null);
+    
+    try {
+      const location = await geolocationService.getLocationWithFallback();
+      setLocationData(location);
+      notificationService.locationCaptured(location.accuracy);
+    } catch (error) {
+      setLocationError(error.message);
+      notificationService.locationFailed();
+    } finally {
+      setIsCapturingLocation(false);
+    }
+  };
+
+  React.useEffect(() => {
+    // Auto-capture location when component mounts
+    captureLocation();
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
+      notificationService.error('Please fill in all required fields');
       return;
     }
 
     setIsSubmitting(true);
+    const loadingToast = notificationService.loading('Saving child record...');
 
     try {
-      const healthId = generateHealthId();
-      const location = await getCurrentLocation();
+      const healthId = `CHR${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`;
       
       const record = {
         ...formData,
@@ -119,7 +138,7 @@ const ChildForm = () => {
         id: Date.now(),
         timestamp: new Date().toISOString(),
         representativeId: 'current_user', // This would come from auth context
-        location,
+        location: locationData,
         uploaded: false // Will be set to true if successfully saved to server
       };
 
@@ -144,12 +163,18 @@ const ChildForm = () => {
       // Always save to IndexedDB for offline access
       await childHealthDB.saveChildRecord(record);
 
+      // Dismiss loading toast
+      notificationService.dismiss(loadingToast);
+
       // Show success message with Health ID
-      const statusMessage = serverSaveSuccess 
-        ? '✅ Child record saved successfully and uploaded to server!'
-        : '✅ Child record saved locally! It will sync when internet is available.';
+      if (serverSaveSuccess) {
+        notificationService.success('Child record saved and uploaded successfully!');
+      } else {
+        notificationService.info('Child record saved locally. Will sync when online.');
+      }
       
-      alert(`${statusMessage}\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`);
+      // Show Health ID generation notification
+      notificationService.healthIdGenerated(healthId);
       
       // Reset form
       setFormData({
@@ -163,36 +188,22 @@ const ChildForm = () => {
         parentalConsent: false,
         photo: null,
       });
+      
+      setLocationData(null);
+      setLocationError(null);
 
       // Redirect to records list
-      navigate('/records');
+      setTimeout(() => {
+        navigate('/records');
+      }, 2000);
 
     } catch (error) {
+      notificationService.dismiss(loadingToast);
       console.error('Error saving record:', error);
-      alert('❌ Error saving record. Please try again.');
+      notificationService.error('Error saving record. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const getCurrentLocation = () => {
-    return new Promise((resolve) => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy
-            });
-          },
-          () => resolve(null),
-          { timeout: 5000 }
-        );
-      } else {
-        resolve(null);
-      }
-    });
   };
 
   const calculateBMI = () => {
@@ -299,6 +310,57 @@ const ChildForm = () => {
                 <AlertCircle className="h-4 w-4 mr-1" />
                 {validationErrors.photo}
               </p>
+            )}
+          </div>
+
+          {/* Location Information */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-5 w-5 text-gray-600" />
+                <h3 className="text-sm font-medium text-gray-900">Location Information</h3>
+              </div>
+              {!locationData && !isCapturingLocation && (
+                <button
+                  type="button"
+                  onClick={captureLocation}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Capture Location
+                </button>
+              )}
+            </div>
+            
+            {isCapturingLocation && (
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                <span>Capturing location...</span>
+              </div>
+            )}
+            
+            {locationData && (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 text-sm text-green-800">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Location captured successfully</span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <p><strong>Coordinates:</strong> {locationData.coordinateString}</p>
+                  <p><strong>Accuracy:</strong> {geolocationService.getAccuracyDescription(locationData.accuracy)}</p>
+                  <p><strong>Captured:</strong> {new Date(locationData.timestamp).toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+            
+            {locationError && (
+              <div className="flex items-start space-x-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-3">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Location capture failed</p>
+                  <p>{locationError}</p>
+                  <p className="mt-1 text-xs">Record will be saved without location data.</p>
+                </div>
+              </div>
             )}
           </div>
 

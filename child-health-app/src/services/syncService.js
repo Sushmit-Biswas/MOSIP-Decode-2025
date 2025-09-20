@@ -1,5 +1,7 @@
 import childHealthDB from './indexedDB';
 import apiService from './apiService';
+import notificationService from './notificationService';
+import eSignetService from './eSignetService';
 
 class SyncService {
   constructor() {
@@ -15,6 +17,7 @@ class SyncService {
   handleOnline() {
     console.log('🌐 Connection restored - triggering sync');
     this.isOnline = true;
+    notificationService.connectionRestored();
     // Auto-sync when connection is restored
     setTimeout(() => this.autoSync(), 2000);
   }
@@ -22,11 +25,22 @@ class SyncService {
   handleOffline() {
     console.log('📴 Connection lost - entering offline mode');
     this.isOnline = false;
+    notificationService.offlineMode();
   }
 
   setAuthToken(token) {
     this.authToken = token;
     apiService.setAuthToken(token);
+  }
+
+  initializeAuth() {
+    // Check if user is already authenticated
+    const authData = eSignetService.getStoredAuthData();
+    if (authData) {
+      this.setAuthToken(authData.token);
+      return true;
+    }
+    return false;
   }
 
   async autoSync() {
@@ -47,17 +61,19 @@ class SyncService {
       return { success: false, message: 'Sync already in progress' };
     }
 
+    // Auto-initialize auth if not present
     if (!this.authToken) {
-      console.log('🔐 No auth token - cannot sync');
-      return { success: false, message: 'Authentication required' };
+      if (!this.initializeAuth()) {
+        console.log('🔐 No auth token - cannot sync');
+        notificationService.authenticationRequired();
+        return { success: false, message: 'Authentication required' };
+      }
     }
 
     this.syncInProgress = true;
+    let progressToast = null;
 
     try {
-      const PENDING_ITEMS = await childHealthDB.getPendingSyncItems();
-      console.log(`Found ${PENDING_ITEMS.length} pending sync items`);
-      
       const pendingRecords = await childHealthDB.getAllChildRecords()
         .then(records => records.filter(r => !r.uploaded));
 
@@ -73,6 +89,9 @@ class SyncService {
         failed: 0,
         errors: []
       };
+
+      // Show progress notification
+      progressToast = notificationService.syncProgress(0, pendingRecords.length);
 
       // Upload records in batches
       const batchSize = 5;
@@ -90,6 +109,9 @@ class SyncService {
                 uploadedAt: new Date().toISOString()
               });
               results.successful++;
+              
+              // Update progress
+              notificationService.syncProgress(results.successful, pendingRecords.length);
             }
           } else {
             results.failed += batch.length;
@@ -104,6 +126,9 @@ class SyncService {
 
       this.syncInProgress = false;
 
+      // Show completion notification
+      notificationService.syncComplete(results.successful, results.failed);
+
       return {
         success: results.successful > 0,
         message: `Sync completed: ${results.successful} successful, ${results.failed} failed`,
@@ -112,7 +137,11 @@ class SyncService {
 
     } catch (error) {
       this.syncInProgress = false;
+      if (progressToast) {
+        notificationService.dismiss(progressToast);
+      }
       console.error('❌ Sync failed:', error);
+      notificationService.error('Sync failed: ' + error.message);
       return { success: false, message: error.message };
     }
   }

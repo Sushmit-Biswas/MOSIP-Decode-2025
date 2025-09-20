@@ -53,6 +53,16 @@ const childRecordSchema = new mongoose.Schema({
   location: {
     latitude: { type: Number, default: null },
     longitude: { type: Number, default: null },
+    accuracy: { type: Number, default: null },
+    altitude: { type: Number, default: null },
+    altitudeAccuracy: { type: Number, default: null },
+    heading: { type: Number, default: null },
+    speed: { type: Number, default: null },
+    timestamp: { type: Number, default: null },
+    formattedTime: { type: String, default: null },
+    coordinateString: { type: String, default: null },
+    accuracyCategory: { type: String, default: null },
+    isFromCache: { type: Boolean, default: false },
     address: { type: String, default: null }
   },
   representativeId: {
