@@ -1,8 +1,11 @@
 import React from 'react';
-import { Camera, Save, User, Calendar, Scale, Ruler, AlertCircle } from 'lucide-react';
+import { Camera, Save, User, Calendar, Scale, Ruler, AlertCircle, MapPin, CheckCircle } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
 import apiService from '../services/apiService';
+import geolocationService from '../services/geolocationService';
+import notificationService from '../services/notificationService';
 import { useNavigate } from 'react-router-dom';
+import { v4 as uuidv4 } from 'uuid';
 
 const ChildForm = () => {
   const navigate = useNavigate();
