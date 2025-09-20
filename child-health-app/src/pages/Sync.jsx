@@ -1,5 +1,7 @@
 import React from 'react';
 import { Upload, Wifi, WifiOff, CheckCircle, AlertCircle, Key } from 'lucide-react';
+import childHealthDB from '../services/indexedDB';
+import syncService from '../services/syncService';
 
 const Sync = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
@@ -24,21 +26,40 @@ const Sync = () => {
     };
   }, []);
 
-  const loadPendingRecords = () => {
-    const records = JSON.parse(localStorage.getItem('childRecords') || '[]');
-    const pending = records.filter(record => !record.uploaded);
-    setPendingRecords(pending);
+  const loadPendingRecords = async () => {
+    try {
+      await childHealthDB.ensureDB();
+      const allRecords = await childHealthDB.getAllChildRecords();
+      const pending = allRecords.filter(record => !record.uploaded);
+      setPendingRecords(pending);
+    } catch (error) {
+      console.error('Failed to load pending records:', error);
+    }
   };
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     
-    // Mock eSignet authentication
-    if (authData.nationalId && authData.otp) {
-      setIsAuthenticated(true);
-      setUploadStatus({ type: 'success', message: 'Authentication successful!' });
-    } else {
-      setUploadStatus({ type: 'error', message: 'Please enter both National ID and OTP' });
+    try {
+      const result = await syncService.authenticateWithESignet(authData.nationalId, authData.otp);
+      
+      if (result.success) {
+        setIsAuthenticated(true);
+        setUploadStatus({ 
+          type: 'success', 
+          message: `Authentication successful! Welcome, ${result.data.user.name}` 
+        });
+      } else {
+        setUploadStatus({ 
+          type: 'error', 
+          message: result.error || 'Authentication failed' 
+        });
+      }
+    } catch {
+      setUploadStatus({ 
+        type: 'error', 
+        message: 'Authentication failed. Please try again.' 
+      });
     }
   };
 
@@ -52,47 +73,58 @@ const Sync = () => {
     setUploadStatus({ type: 'info', message: 'Uploading records...' });
 
     try {
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Mock successful upload
-      const allRecords = JSON.parse(localStorage.getItem('childRecords') || '[]');
-      const updatedRecords = allRecords.map(record => ({
-        ...record,
-        uploaded: true,
-        uploadTimestamp: new Date().toISOString()
-      }));
-
-      localStorage.setItem('childRecords', JSON.stringify(updatedRecords));
-      window.dispatchEvent(new Event('storage'));
-
-      setPendingRecords([]);
-      setUploadStatus({ 
-        type: 'success', 
-        message: `Successfully uploaded ${pendingRecords.length} records!` 
-      });
-
-    } catch (error) {
+      const result = await syncService.forcSync();
+      
+      if (result.success) {
+        setUploadStatus({ 
+          type: 'success', 
+          message: result.message 
+        });
+        
+        // Reload pending records
+        await loadPendingRecords();
+      } else {
+        setUploadStatus({ 
+          type: 'error', 
+          message: result.message || 'Upload failed. Please try again.' 
+        });
+      }
+    } catch {
       setUploadStatus({ 
         type: 'error', 
-        message: 'Upload failed. Please try again.' 
+        message: 'Upload failed. Please check your connection and try again.' 
       });
     } finally {
       setIsUploading(false);
     }
   };
 
-  const sendOTP = () => {
+  const sendOTP = async () => {
     if (!authData.nationalId) {
       setUploadStatus({ type: 'error', message: 'Please enter National ID first' });
       return;
     }
 
-    // Mock OTP sending
-    setUploadStatus({ 
-      type: 'info', 
-      message: 'OTP sent to your registered mobile number. Use 123456 for testing.' 
-    });
+    try {
+      const result = await syncService.sendOTP(authData.nationalId);
+      
+      if (result.success) {
+        setUploadStatus({ 
+          type: 'info', 
+          message: result.message + (result.otp ? ` Test OTP: ${result.otp}` : '')
+        });
+      } else {
+        setUploadStatus({ 
+          type: 'error', 
+          message: result.error || 'Failed to send OTP' 
+        });
+      }
+    } catch {
+      setUploadStatus({ 
+        type: 'error', 
+        message: 'Failed to send OTP. Please try again.' 
+      });
+    }
   };
 
   return (
