@@ -1,12 +1,17 @@
 import React from 'react';
-import { FileText, Calendar, User, Upload, CheckCircle, AlertCircle, RefreshCw, MapPin } from 'lucide-react';
+import { FileText, Calendar, User, Upload, CheckCircle, AlertCircle, RefreshCw, MapPin, Download } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
+import RecordDetailsModal from '../components/RecordDetailsModal';
+import pdfService from '../services/pdfService';
+import notificationService from '../services/notificationService';
 
 const RecordsList = () => {
   const [records, setRecords] = React.useState([]);
   const [filter, setFilter] = React.useState('all'); // 'all', 'uploaded', 'pending'
   const [isLoading, setIsLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [selectedRecord, setSelectedRecord] = React.useState(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   React.useEffect(() => {
     loadRecords();
@@ -29,6 +34,40 @@ const RecordsList = () => {
     setRefreshing(true);
     await loadRecords();
     setRefreshing(false);
+  };
+
+  const handleViewDetails = (record) => {
+    setSelectedRecord(record);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRecord(null);
+  };
+
+  const handleDownloadPDF = async (record, event) => {
+    event.stopPropagation(); // Prevent modal from opening
+    try {
+      const loadingToast = notificationService.loading('Generating PDF...');
+      const pdfBlob = await pdfService.generateHealthBooklet(record);
+      notificationService.dismiss(loadingToast);
+      
+      // Create download link
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `health-booklet-${record.healthId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      notificationService.success('Health booklet downloaded successfully!');
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      notificationService.error('Failed to generate PDF. Please try again.');
+    }
   };
 
   const filteredRecords = records.filter(record => {
@@ -256,15 +295,35 @@ const RecordsList = () => {
                     <Calendar className="h-3 w-3 mr-1" />
                     {formatDate(record.timestamp)}
                   </div>
-                  <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                    View Details
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      onClick={(e) => handleDownloadPDF(record, e)}
+                      className="text-green-600 hover:text-green-700 text-sm font-medium transition-colors flex items-center space-x-1"
+                      title="Download PDF"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>PDF</span>
+                    </button>
+                    <button 
+                      onClick={() => handleViewDetails(record)}
+                      className="text-primary-600 hover:text-primary-700 text-sm font-medium transition-colors"
+                    >
+                      View Details
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+      
+      {/* Record Details Modal */}
+      <RecordDetailsModal
+        record={selectedRecord}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
