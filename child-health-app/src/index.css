@@ -7,23 +7,328 @@
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     margin: 0;
     background-color: #f9fafb;
+    /* Improve touch scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent zoom on double tap on iOS */
+    touch-action: manipulation;
+  }
+
+  /* Prevent zoom on inputs on mobile */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  /* Improve touch targets */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"] {
+    min-height: 44px; /* iOS recommended touch target */
+    min-width: 44px;
+  }
+
+  /* Fix viewport height on mobile browsers */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height */
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium py-3 px-6 rounded-lg transition-colors;
+    /* Enhanced touch feedback */
+    @apply transform active:scale-95 transition-transform;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-800 font-medium py-3 px-6 rounded-lg transition-colors;
+    @apply transform active:scale-95 transition-transform;
   }
   
   .form-input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    /* Better mobile input styling */
+    @apply text-base; /* Prevents zoom on iOS */
+    @apply touch-manipulation; /* Better touch handling */
   }
   
   .form-label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  /* Mobile-specific button styling */
+  .mobile-btn {
+    @apply py-4 px-6 text-base font-medium rounded-lg;
+    @apply transform active:scale-95 transition-transform duration-150;
+    @apply touch-manipulation;
+  }
+
+  /* Card component with better mobile spacing */
+  .mobile-card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6;
+    @apply mb-4 sm:mb-6;
+  }
+
+  /* Responsive grid */
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+
+  /* Touch-friendly form layout */
+  .mobile-form {
+    @apply space-y-6 sm:space-y-4;
+  }
+
+  .mobile-form .form-input {
+    @apply py-4 sm:py-3;
+  }
+
+  /* Improved mobile navigation */
+  .mobile-nav-hidden {
+    @apply hidden md:flex;
+  }
+
+  /* Better mobile photo capture */
+  .photo-capture-area {
+    @apply relative w-full h-48 sm:h-32 border-2 border-dashed border-gray-300 rounded-lg;
+    @apply flex items-center justify-center;
+    @apply bg-gray-50 hover:bg-gray-100 transition-colors;
+    @apply cursor-pointer;
+  }
+
+  /* Mobile-optimized table */
+  .mobile-table {
+    @apply block sm:table w-full;
+  }
+
+  .mobile-table thead {
+    @apply hidden sm:table-header-group;
+  }
+
+  .mobile-table tbody {
+    @apply block sm:table-row-group;
+  }
+
+  .mobile-table tr {
+    @apply block sm:table-row border border-gray-200 mb-4 sm:mb-0 sm:border-none rounded-lg sm:rounded-none;
+  }
+
+  .mobile-table td {
+    @apply block sm:table-cell px-4 py-3 sm:px-6 sm:py-4;
+    @apply border-b border-gray-100 sm:border-b-0;
+  }
+
+  .mobile-table td:before {
+    content: attr(data-label);
+    @apply block sm:hidden font-medium text-gray-700 mb-1;
+  }
+
+  /* Loading animations optimized for mobile */
+  .mobile-loading {
+    @apply animate-pulse;
+  }
+
+  /* Better touch feedback for interactive elements */
+  .touch-feedback {
+    @apply transform transition-transform duration-150 active:scale-95;
+  }
+
+  /* Improved accessibility for mobile */
+  .focus-visible {
+    @apply focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  /* PWA specific styles */
+  .pwa-installed {
+    @apply pt-safe-top pb-safe-bottom pl-safe-left pr-safe-right;
+  }
+
+  /* Offline indicator */
+  .offline-indicator {
+    @apply fixed top-0 left-0 right-0 bg-yellow-100 border-b border-yellow-300 px-4 py-2 z-50;
+    @apply text-center text-yellow-800 text-sm font-medium;
+  }
+
+  /* Better mobile modals */
+  .mobile-modal {
+    @apply fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50;
+  }
+
+  .mobile-modal-content {
+    @apply bg-white w-full sm:max-w-md rounded-t-lg sm:rounded-lg;
+    @apply max-h-[90vh] overflow-y-auto;
+  }
+
+  /* Improved mobile form validation */
+  .error-input {
+    @apply border-red-500 ring-1 ring-red-500;
+  }
+
+  .error-message {
+    @apply text-red-600 text-sm mt-1 flex items-center;
+  }
+
+  /* Mobile-friendly date inputs */
+  input[type="date"] {
+    @apply text-base; /* Prevents zoom on iOS */
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Better mobile scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .mobile-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+}
+
+/* Mobile-specific utility classes */
+@layer utilities {
+  /* Safe area support for PWAs */
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .pl-safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .pr-safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Touch-optimized spacing */
+  .touch-spacing {
+    @apply p-4 sm:p-6;
+  }
+
+  /* Mobile-first responsive text */
+  .mobile-text-sm {
+    @apply text-base sm:text-sm;
+  }
+
+  .mobile-text-base {
+    @apply text-lg sm:text-base;
+  }
+
+  /* Better mobile button sizing */
+  .mobile-btn-sm {
+    @apply px-4 py-3 text-sm sm:px-3 sm:py-2;
+  }
+
+  .mobile-btn-lg {
+    @apply px-8 py-4 text-lg sm:px-6 sm:py-3 sm:text-base;
+  }
+
+  /* Mobile-optimized flex layouts */
+  .mobile-flex-col {
+    @apply flex flex-col sm:flex-row;
+  }
+
+  .mobile-space-y {
+    @apply space-y-4 sm:space-y-0 sm:space-x-4;
+  }
+
+  /* Hide elements on mobile */
+  .desktop-only {
+    @apply hidden sm:block;
+  }
+
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+}
+
+/* Media queries for enhanced mobile experience */
+@media (max-width: 640px) {
+  /* Improve mobile form inputs */
+  .form-input {
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  /* Better mobile navigation */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Mobile-specific animations */
+  .mobile-slide-up {
+    animation: slideUpMobile 0.3s ease-out;
+  }
+
+  @keyframes slideUpMobile {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* PWA display mode detection */
+@media (display-mode: standalone) {
+  .pwa-only {
+    display: block;
+  }
+  
+  .browser-only {
+    display: none;
+  }
+
+  /* Adjust layout for PWA */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Dark mode support (system preference) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-auto {
+    @apply bg-gray-900 text-white;
+  }
+  
+  .dark-mode-auto .bg-white {
+    @apply bg-gray-800;
+  }
+  
+  .dark-mode-auto .text-gray-900 {
+    @apply text-gray-100;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .transition-all,
+  .transition-transform,
+  .transition-colors {
+    transition: none !important;
+  }
+  
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
   }
 }
