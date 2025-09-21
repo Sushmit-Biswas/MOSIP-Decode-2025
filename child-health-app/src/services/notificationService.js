@@ -11,11 +11,58 @@ class NotificationService {
         color: '#fff',
         padding: '16px',
         fontWeight: '500',
+        maxWidth: '500px',
       },
     };
+    
+    // Track active notifications to prevent duplicates
+    this.activeNotifications = new Set();
+    this.maxNotifications = 3;
+    this.recentMessages = new Map(); // Track recent messages to prevent spam
+  }
+
+  // Helper method to check for duplicate messages
+  isDuplicate(message, type) {
+    const key = `${type}:${message}`;
+    const now = Date.now();
+    const lastShown = this.recentMessages.get(key);
+    
+    // Consider it duplicate if same message was shown in last 5 seconds
+    if (lastShown && (now - lastShown) < 5000) {
+      return true;
+    }
+    
+    this.recentMessages.set(key, now);
+    
+    // Clean up old entries
+    for (const [k, timestamp] of this.recentMessages.entries()) {
+      if (now - timestamp > 30000) { // Remove entries older than 30 seconds
+        this.recentMessages.delete(k);
+      }
+    }
+    
+    return false;
+  }
+
+  // Helper to manage notification limits
+  manageNotificationLimit() {
+    const activeToasts = toast._state.toasts.filter(t => t.visible);
+    if (activeToasts.length >= this.maxNotifications) {
+      // Dismiss the oldest toast
+      const oldestToast = activeToasts[0];
+      if (oldestToast) {
+        toast.dismiss(oldestToast.id);
+      }
+    }
   }
 
   success(message, options = {}) {
+    if (this.isDuplicate(message, 'success')) {
+      return null;
+    }
+    
+    this.manageNotificationLimit();
+    
     return toast.success(message, {
       ...this.defaultOptions,
       icon: '✅',
@@ -29,6 +76,12 @@ class NotificationService {
   }
 
   error(message, options = {}) {
+    if (this.isDuplicate(message, 'error')) {
+      return null;
+    }
+    
+    this.manageNotificationLimit();
+    
     return toast.error(message, {
       ...this.defaultOptions,
       icon: '❌',
@@ -43,6 +96,12 @@ class NotificationService {
   }
 
   info(message, options = {}) {
+    if (this.isDuplicate(message, 'info')) {
+      return null;
+    }
+    
+    this.manageNotificationLimit();
+    
     return toast(message, {
       ...this.defaultOptions,
       icon: 'ℹ️',
@@ -56,6 +115,12 @@ class NotificationService {
   }
 
   warning(message, options = {}) {
+    if (this.isDuplicate(message, 'warning')) {
+      return null;
+    }
+    
+    this.manageNotificationLimit();
+    
     return toast(message, {
       ...this.defaultOptions,
       icon: '⚠️',
@@ -69,6 +134,9 @@ class NotificationService {
   }
 
   loading(message = 'Loading...', options = {}) {
+    // Don't check for duplicates on loading messages as they need to be updated
+    this.manageNotificationLimit();
+    
     return toast.loading(message, {
       ...this.defaultOptions,
       style: {

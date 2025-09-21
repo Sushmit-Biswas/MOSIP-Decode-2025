@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Users, ArrowLeft, Eye, EyeOff, Key, Phone } from 'lucide-react';
-import eSignetService from '../services/eSignetService';
 import notificationService from '../services/notificationService';
 
 const FieldRepresentativeLogin = () => {
@@ -13,59 +12,32 @@ const FieldRepresentativeLogin = () => {
   const [showOtp, setShowOtp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [transactionId, setTransactionId] = useState(null);
 
   useEffect(() => {
     // Check if already authenticated
-    if (eSignetService.isAuthenticated()) {
-      const authData = eSignetService.getStoredAuthData();
-      if (authData.user.role === 'field_representative') {
+    const token = localStorage.getItem('auth_token');
+    const userInfo = localStorage.getItem('user_info');
+    const expires = localStorage.getItem('auth_expires');
+    
+    if (token && userInfo && expires && Date.now() < parseInt(expires)) {
+      const user = JSON.parse(userInfo);
+      if (user.role === 'field_representative') {
         navigate('/dashboard');
       }
     }
   }, [navigate]);
 
-  const handleSendOtp = async () => {
-    if (!formData.nationalId) {
-      notificationService.error('Please enter your National ID');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Initialize OAuth transaction
-      const initResult = await eSignetService.initializeOAuthTransaction('field_representative');
-      
-      if (!initResult.success) {
-        notificationService.error(initResult.error);
-        return;
-      }
-
-      setTransactionId(initResult.transactionId);
-
-      // Send OTP
-      const otpResult = await eSignetService.sendOTP(initResult.transactionId, formData.nationalId);
-      
-      if (otpResult.success) {
-        setOtpSent(true);
-        notificationService.success('OTP sent to your registered mobile/email');
-        
-        // In development, show test OTP
-        if (import.meta.env.DEV) {
-          notificationService.info('Development: Use OTP 123456 for testing');
-        }
-      } else {
-        notificationService.error(otpResult.error);
-      }
-    } catch (err) {
-      console.error('Send OTP error:', err);
-      notificationService.error('Failed to send OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
+  const handleInputChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+    
+    // Auto-show OTP field when nationalId is entered
+    if (e.target.name === 'nationalId' && e.target.value.trim()) {
+      setOtpSent(true);
     }
   };
-
-  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!formData.nationalId || !formData.otp) {
@@ -75,47 +47,50 @@ const FieldRepresentativeLogin = () => {
 
     setIsLoading(true);
     try {
-      let result;
+      // Simple mock authentication for demo
+      const validOTPs = ['123456', '000000'];
       
-      if (transactionId) {
-        // Use existing transaction for real eSignet flow
-        result = await eSignetService.completeAuthentication(
-          formData.nationalId, 
-          formData.otp, 
-          'field_representative'
-        );
-      } else {
-        // Fallback for development/testing
-        if (formData.otp === '123456' || formData.otp === '000000') {
-          result = {
-            success: true,
-            user: {
-              nationalId: formData.nationalId,
-              name: 'Field Representative',
-              role: 'field_representative'
-            },
-            accessToken: 'mock_token_' + Date.now()
-          };
-          
-          // Store mock auth data
-          eSignetService.storeAuthData({
-            accessToken: result.accessToken,
-            user: result.user,
-            expiresIn: 3600
-          });
-        } else {
-          result = {
-            success: false,
-            error: 'Invalid OTP. Use 123456 for testing.'
-          };
-        }
-      }
-
-      if (result.success) {
-        notificationService.success(`Welcome, ${result.user.name}!`);
+      if (validOTPs.includes(formData.otp)) {
+        // Mock auth success
+        const authData = {
+          success: true,
+          user: {
+            nationalId: formData.nationalId,
+            name: formData.nationalId === '2304715938' ? 'Priya Sharma' : 
+                  formData.nationalId === '1234567890' ? 'Amit Kumar' : 
+                  'Field Representative',
+            role: 'field_representative',
+            email: 'field@sehat-saathi.org',
+            loginTime: new Date().toISOString()
+          },
+          accessToken: `field_token_${Date.now()}`,
+          expiresIn: 3600
+        };
+        
+        // Store auth data
+        localStorage.setItem('auth_token', authData.accessToken);
+        localStorage.setItem('user_info', JSON.stringify(authData.user));
+        localStorage.setItem('auth_expires', (Date.now() + (authData.expiresIn * 1000)).toString());
+        
+        // Log activity
+        const activityLog = {
+          timestamp: new Date().toISOString(),
+          userId: authData.user.nationalId,
+          userName: authData.user.name,
+          userRole: authData.user.role,
+          action: 'login',
+          sessionId: `session_${Date.now()}`,
+          userAgent: navigator.userAgent
+        };
+        
+        const existingLogs = JSON.parse(localStorage.getItem('auth_activity_logs') || '[]');
+        existingLogs.push(activityLog);
+        localStorage.setItem('auth_activity_logs', JSON.stringify(existingLogs));
+        
+        notificationService.success(`Welcome, ${authData.user.name}!`);
         navigate('/dashboard');
       } else {
-        notificationService.error(result.error);
+        notificationService.error('Invalid OTP. Use 123456 or 000000 for demo.');
       }
     } catch (err) {
       console.error('Authentication error:', err);
