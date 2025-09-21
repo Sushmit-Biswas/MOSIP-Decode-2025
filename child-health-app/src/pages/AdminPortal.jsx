@@ -86,7 +86,7 @@ const AdminPortal = () => {
 
   React.useEffect(() => {
     loadRecords();
-  }, []);
+  }, [loadRecords]);
 
   const calculateStats = React.useCallback(() => {
     if (records.length === 0) return;
@@ -140,23 +140,126 @@ const AdminPortal = () => {
     calculateStats();
   }, [records, calculateStats]);
 
-  const loadRecords = async () => {
+  const createDemoData = React.useCallback(async () => {
+    try {
+      const demoRecords = [
+        {
+          id: 'demo_001',
+          healthId: 'CHR001',
+          childName: 'Aarav Sharma',
+          age: 5,
+          weight: 18.5,
+          height: 110,
+          parentName: 'Priya Sharma',
+          malnutritionSigns: 'None',
+          recentIllnesses: 'Cold last month',
+          timestamp: new Date(2025, 8, 20).toISOString(),
+          uploaded: true,
+          representativeId: '2304715938',
+          location: { latitude: 12.9716, longitude: 77.5946, accuracy: 10 }
+        },
+        {
+          id: 'demo_002',
+          healthId: 'CHR002',
+          childName: 'Kavya Patel',
+          age: 7,
+          weight: 22.0,
+          height: 122,
+          parentName: 'Amit Patel',
+          malnutritionSigns: 'Mild underweight',
+          recentIllnesses: 'None',
+          timestamp: new Date(2025, 8, 21).toISOString(),
+          uploaded: false,
+          representativeId: '1234567890',
+          location: { latitude: 12.9716, longitude: 77.5946, accuracy: 15 }
+        },
+        {
+          id: 'demo_003',
+          healthId: 'CHR003',
+          childName: 'Rohan Singh',
+          age: 3,
+          weight: 13.2,
+          height: 95,
+          parentName: 'Rajesh Singh',
+          malnutritionSigns: 'None',
+          recentIllnesses: 'Fever last week',
+          timestamp: new Date(2025, 8, 22).toISOString(),
+          uploaded: true,
+          representativeId: '2304715938',
+          location: { latitude: 12.9716, longitude: 77.5946, accuracy: 8 }
+        },
+        {
+          id: 'demo_004',
+          healthId: 'CHR004',
+          childName: 'Ananya Kumar',
+          age: 6,
+          weight: 19.8,
+          height: 115,
+          parentName: 'Sunita Kumar',
+          malnutritionSigns: 'None',
+          recentIllnesses: 'None',
+          timestamp: new Date(2025, 8, 19).toISOString(),
+          uploaded: true,
+          representativeId: 'FR001',
+          location: { latitude: 12.9716, longitude: 77.5946, accuracy: 12 }
+        },
+        {
+          id: 'demo_005',
+          healthId: 'CHR005',
+          childName: 'Arjun Mehta',
+          age: 4,
+          weight: 15.5,
+          height: 102,
+          parentName: 'Neha Mehta',
+          malnutritionSigns: 'Signs of malnutrition observed',
+          recentIllnesses: 'Diarrhea',
+          timestamp: new Date(2025, 8, 18).toISOString(),
+          uploaded: false,
+          representativeId: '1234567890',
+          location: { latitude: 12.9716, longitude: 77.5946, accuracy: 20 }
+        }
+      ];
+
+      // Add demo records to IndexedDB
+      for (const record of demoRecords) {
+        await childHealthDB.addChildRecord(record);
+      }
+      
+      console.log('AdminPortal: Demo data created successfully');
+      notificationService.success('Demo data loaded for presentation');
+    } catch (error) {
+      console.error('AdminPortal: Failed to create demo data:', error);
+    }
+  }, []);
+
+  const loadRecords = React.useCallback(async () => {
     setLoading(true);
     try {
-      console.log('Loading records...');
+      console.log('AdminPortal: Loading records...');
       await childHealthDB.ensureDB();
       const allRecords = await childHealthDB.getAllChildRecords();
-      console.log('Records loaded:', allRecords);
-      setRecords(allRecords);
+      console.log('AdminPortal: Records loaded:', allRecords.length);
+      
+      // If no records exist, add demo data for better presentation
+      if (allRecords.length === 0) {
+        console.log('AdminPortal: No records found, creating demo data...');
+        await createDemoData();
+        const demoRecords = await childHealthDB.getAllChildRecords();
+        console.log('AdminPortal: Demo records created:', demoRecords.length);
+        setRecords(demoRecords);
+      } else {
+        setRecords(allRecords);
+      }
     } catch (error) {
-      console.error('Failed to load records:', error);
+      console.error('AdminPortal: Failed to load records:', error);
       notificationService.error('Failed to load records');
       // Set empty array so the component still renders
       setRecords([]);
     } finally {
       setLoading(false);
+      console.log('AdminPortal: Loading complete');
     }
-  };
+  }, [createDemoData]);
 
   // Utility functions
   const formatDate = (dateString) => {
