@@ -314,7 +314,17 @@ const AnalyticsDashboard = () => {
               <input
                 type="date"
                 value={dateRange.from}
-                onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                max={new Date().toISOString().split('T')[0]} // Prevent future dates
+                onChange={(e) => {
+                  const newFromDate = e.target.value;
+                  // Ensure "From" date is not later than "To" date
+                  if (newFromDate <= dateRange.to) {
+                    setDateRange(prev => ({ ...prev, from: newFromDate }));
+                  } else {
+                    // If "From" date is later than "To" date, update "To" date as well
+                    setDateRange(prev => ({ ...prev, from: newFromDate, to: newFromDate }));
+                  }
+                }}
                 className="mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -323,7 +333,15 @@ const AnalyticsDashboard = () => {
               <input
                 type="date"
                 value={dateRange.to}
-                onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                min={dateRange.from} // Ensure "To" date is not earlier than "From" date
+                max={new Date().toISOString().split('T')[0]} // Prevent future dates
+                onChange={(e) => {
+                  const newToDate = e.target.value;
+                  // Ensure "To" date is not earlier than "From" date
+                  if (newToDate >= dateRange.from) {
+                    setDateRange(prev => ({ ...prev, to: newToDate }));
+                  }
+                }}
                 className="mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
