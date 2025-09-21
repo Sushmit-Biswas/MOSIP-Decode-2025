@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Users, UserCheck } from 'lucide-react';
+import SehatSaathiLogo from '../assets/sehat-saathi-logo.svg';
 
 const LandingPage = () => {
   return (
@@ -9,13 +10,14 @@ const LandingPage = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-6">
-            <div className="bg-primary-600 rounded-full p-4">
-              <Shield className="h-12 w-12 text-white" />
-            </div>
+            <img src={SehatSaathiLogo} alt="Sehat Saathi" className="h-20 w-20" />
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Child Health Record System
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Sehat Saathi
           </h1>
+          <h2 className="text-2xl font-semibold text-primary-600 mb-4">
+            Child Health Record System
+          </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Empowering healthcare workers to capture critical child health data anywhere, 
             with secure eSignet authentication and offline capabilities.

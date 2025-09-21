@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3 } from 'lucide-react';
+import SehatSaathiLogo from '../assets/sehat-saathi-logo.svg';
 
 const Navigation = () => {
   const location = useLocation();
@@ -33,9 +34,12 @@ const Navigation = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-2">
-              <Heart className="h-8 w-8 text-primary-600" />
-              <span className="text-xl font-bold text-gray-900">Child Health Record</span>
+            <div className="flex items-center space-x-3">
+              <img src={SehatSaathiLogo} alt="Sehat Saathi" className="h-10 w-10" />
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-gray-900">Sehat Saathi</span>
+                <span className="text-xs text-gray-600">Child Health Records</span>
+              </div>
             </div>
             
             <div className="hidden md:flex space-x-4">
