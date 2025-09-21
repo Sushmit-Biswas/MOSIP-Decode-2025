@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Save, User, Calendar, Scale, Ruler, AlertCircle, MapPin, CheckCircle } from 'lucide-react';
+import { Camera, Save, User, Calendar, Scale, Ruler, AlertCircle, MapPin, CheckCircle, Plus, Minus } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
 import apiService from '../services/apiService';
 import geolocationService from '../services/geolocationService';
@@ -288,17 +288,53 @@ const ChildForm = () => {
             </div>
             <div>
               <label className="form-label">Age (years) *</label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                onChange={handleInputChange}
-                className={`form-input ${validationErrors.age ? 'border-red-500' : ''}`}
-                min="0"
-                max="18"
-                step="0.1"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  onChange={handleInputChange}
+                  onKeyDown={(e) => {
+                    // Prevent decimal input
+                    if (e.key === '.' || e.key === ',') {
+                      e.preventDefault();
+                    }
+                  }}
+                  className={`form-input pr-20 ${validationErrors.age ? 'border-red-500' : ''}`}
+                  min="0"
+                  max="18"
+                  step="1"
+                  required
+                />
+                <div className="absolute right-1 top-1 bottom-1 flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentAge = parseInt(formData.age) || 0;
+                      if (currentAge < 18) {
+                        setFormData(prev => ({ ...prev, age: (currentAge + 1).toString() }));
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-t border-b border-gray-300 transition-colors"
+                    aria-label="Increase age"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentAge = parseInt(formData.age) || 0;
+                      if (currentAge > 0) {
+                        setFormData(prev => ({ ...prev, age: (currentAge - 1).toString() }));
+                      }
+                    }}
+                    className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-b transition-colors"
+                    aria-label="Decrease age"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
               {validationErrors.age && (
                 <p className="text-red-500 text-sm mt-1 flex items-center">
                   <AlertCircle className="h-4 w-4 mr-1" />
