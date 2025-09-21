@@ -9,6 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 const ChildForm = () => {
   const navigate = useNavigate();
+  const hasInitializedLocation = React.useRef(false);
+  
   const [formData, setFormData] = React.useState({
     childName: '',
     age: '',
@@ -98,6 +100,11 @@ const ChildForm = () => {
   };
 
   const captureLocation = async () => {
+    // Prevent duplicate location capture requests
+    if (isCapturingLocation) {
+      return;
+    }
+    
     setIsCapturingLocation(true);
     setLocationError(null);
     
@@ -107,16 +114,50 @@ const ChildForm = () => {
       notificationService.locationCaptured(location.accuracy);
     } catch (error) {
       setLocationError(error.message);
-      notificationService.locationFailed();
+      // Only show notification if we don't already have a location
+      if (!locationData) {
+        notificationService.locationFailed();
+      }
     } finally {
       setIsCapturingLocation(false);
     }
   };
 
   React.useEffect(() => {
-    // Auto-capture location when component mounts
-    captureLocation();
-  }, []);
+    // Auto-capture location when component mounts, but only once
+    let isMounted = true;
+    
+    const initializeLocation = async () => {
+      if (isMounted && !hasInitializedLocation.current && !locationData && !isCapturingLocation) {
+        hasInitializedLocation.current = true;
+        setIsCapturingLocation(true);
+        setLocationError(null);
+        
+        try {
+          const location = await geolocationService.getLocationWithFallback();
+          if (isMounted) {
+            setLocationData(location);
+            notificationService.locationCaptured(location.accuracy);
+          }
+        } catch (error) {
+          if (isMounted) {
+            setLocationError(error.message);
+            notificationService.locationFailed();
+          }
+        } finally {
+          if (isMounted) {
+            setIsCapturingLocation(false);
+          }
+        }
+      }
+    };
+    
+    initializeLocation();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [locationData, isCapturingLocation]); // Include dependencies but use ref to prevent re-runs
 
   const handleSubmit = async (e) => {
     e.preventDefault();
