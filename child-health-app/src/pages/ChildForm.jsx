@@ -36,10 +36,24 @@ const ChildForm = () => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    
+    // Special handling for age to ensure integer only
+    if (name === 'age') {
+      // Only allow integer values
+      const intValue = parseInt(value) || '';
+      if (value !== '' && (isNaN(intValue) || intValue < 0 || intValue > 18)) {
+        return; // Don't update if invalid
+      }
+      setFormData(prev => ({
+        ...prev,
+        [name]: intValue === '' ? '' : intValue.toString()
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
 
     // Clear validation error when user starts typing
     if (validationErrors[name]) {
@@ -280,15 +294,25 @@ const ChildForm = () => {
                   value={formData.age}
                   onChange={handleInputChange}
                   onKeyDown={(e) => {
-                    // Prevent decimal input
-                    if (e.key === '.' || e.key === ',') {
+                    // Prevent decimal input and invalid characters
+                    if (e.key === '.' || e.key === ',' || e.key === '-' || e.key === '+' || e.key === 'e') {
                       e.preventDefault();
+                    }
+                  }}
+                  onPaste={(e) => {
+                    // Prevent pasting invalid content
+                    e.preventDefault();
+                    const paste = (e.clipboardData || window.clipboardData).getData('text');
+                    const value = parseInt(paste);
+                    if (!isNaN(value) && value >= 0 && value <= 18) {
+                      setFormData(prev => ({ ...prev, age: value.toString() }));
                     }
                   }}
                   className={`form-input pr-20 ${validationErrors.age ? 'border-red-500' : ''}`}
                   min="0"
                   max="18"
                   step="1"
+                  placeholder="Enter age (0-18)"
                   required
                 />
                 <div className="absolute right-1 top-1 bottom-1 flex flex-col">
@@ -301,7 +325,8 @@ const ChildForm = () => {
                       }
                     }}
                     className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-t border-b border-gray-300 transition-colors"
-                    aria-label="Increase age"
+                    aria-label="Increase age by 1"
+                    title="Increase age by 1"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
@@ -314,7 +339,8 @@ const ChildForm = () => {
                       }
                     }}
                     className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-b transition-colors"
-                    aria-label="Decrease age"
+                    aria-label="Decrease age by 1"
+                    title="Decrease age by 1"
                   >
                     <Minus className="h-3 w-3" />
                   </button>
