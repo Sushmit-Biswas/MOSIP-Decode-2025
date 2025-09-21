@@ -99,7 +99,7 @@ const ChildForm = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const captureLocation = async () => {
+  const captureLocation = React.useCallback(async (isAutoCapture = false) => {
     // Prevent duplicate location capture requests
     if (isCapturingLocation) {
       return;
@@ -111,17 +111,20 @@ const ChildForm = () => {
     try {
       const location = await geolocationService.getLocationWithFallback();
       setLocationData(location);
-      notificationService.locationCaptured(location.accuracy);
+      // Only show notification for manual captures, not auto-captures
+      if (!isAutoCapture) {
+        notificationService.locationCaptured(location.accuracy);
+      }
     } catch (error) {
       setLocationError(error.message);
-      // Only show notification if we don't already have a location
-      if (!locationData) {
+      // Only show notification if we don't already have a location and it's not an auto-capture
+      if (!locationData && !isAutoCapture) {
         notificationService.locationFailed();
       }
     } finally {
       setIsCapturingLocation(false);
     }
-  };
+  }, [isCapturingLocation, locationData]);
 
   React.useEffect(() => {
     // Auto-capture location when component mounts, but only once
@@ -130,25 +133,7 @@ const ChildForm = () => {
     const initializeLocation = async () => {
       if (isMounted && !hasInitializedLocation.current && !locationData && !isCapturingLocation) {
         hasInitializedLocation.current = true;
-        setIsCapturingLocation(true);
-        setLocationError(null);
-        
-        try {
-          const location = await geolocationService.getLocationWithFallback();
-          if (isMounted) {
-            setLocationData(location);
-            notificationService.locationCaptured(location.accuracy);
-          }
-        } catch (error) {
-          if (isMounted) {
-            setLocationError(error.message);
-            notificationService.locationFailed();
-          }
-        } finally {
-          if (isMounted) {
-            setIsCapturingLocation(false);
-          }
-        }
+        await captureLocation(true); // Pass true to indicate auto-capture
       }
     };
     
@@ -157,7 +142,7 @@ const ChildForm = () => {
     return () => {
       isMounted = false;
     };
-  }, [locationData, isCapturingLocation]); // Include dependencies but use ref to prevent re-runs
+  }, [locationData, isCapturingLocation, captureLocation]); // Include dependencies but use ref to prevent re-runs
 
   const handleSubmit = async (e) => {
     e.preventDefault();
