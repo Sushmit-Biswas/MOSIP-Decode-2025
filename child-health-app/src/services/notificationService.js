@@ -47,9 +47,10 @@ class NotificationService {
   // Helper to manage notification limits
   manageNotificationLimit() {
     const activeToasts = toast._state.toasts.filter(t => t.visible);
-    if (activeToasts.length >= this.maxNotifications) {
-      // Dismiss the oldest toast
-      const oldestToast = activeToasts[0];
+    
+    // If we're at or above the limit, dismiss the oldest toast(s)
+    while (activeToasts.length >= this.maxNotifications) {
+      const oldestToast = activeToasts.shift();
       if (oldestToast) {
         toast.dismiss(oldestToast.id);
       }
@@ -71,6 +72,7 @@ class NotificationService {
         background: '#10B981',
         color: '#fff',
       },
+      dismiss: true, // Enable manual dismissal
       ...options,
     });
   }
@@ -91,6 +93,7 @@ class NotificationService {
         color: '#fff',
       },
       duration: 6000, // Longer duration for errors
+      dismiss: true, // Enable manual dismissal
       ...options,
     });
   }
@@ -110,6 +113,7 @@ class NotificationService {
         background: '#3B82F6',
         color: '#fff',
       },
+      dismiss: true, // Enable manual dismissal
       ...options,
     });
   }
@@ -129,6 +133,7 @@ class NotificationService {
         background: '#F59E0B',
         color: '#fff',
       },
+      dismiss: true, // Enable manual dismissal
       ...options,
     });
   }

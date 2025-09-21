@@ -31,7 +31,37 @@ function AppContent() {
 
   return (
     <>
-      <Toaster />
+      <Toaster 
+        position="top-center"
+        containerStyle={{
+          top: 20,
+          zIndex: 9999,
+        }}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            borderRadius: '10px',
+            background: '#333',
+            color: '#fff',
+            padding: '16px',
+            fontWeight: '500',
+            maxWidth: '500px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <ConnectionStatus />
       <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
         <Navigation />
