@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Users, ArrowLeft, Eye, EyeOff, Key, Phone } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import notificationService from '../services/notificationService';
 
 const FieldRepresentativeLogin = () => {
   const navigate = useNavigate();
+  const { login, isAuthenticated, user } = useAuth();
   const [formData, setFormData] = useState({
     nationalId: '',
     otp: ''
@@ -14,18 +16,11 @@ const FieldRepresentativeLogin = () => {
   const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
-    // Check if already authenticated
-    const token = localStorage.getItem('auth_token');
-    const userInfo = localStorage.getItem('user_info');
-    const expires = localStorage.getItem('auth_expires');
-    
-    if (token && userInfo && expires && Date.now() < parseInt(expires)) {
-      const user = JSON.parse(userInfo);
-      if (user.role === 'field_representative') {
-        navigate('/dashboard');
-      }
+    // Redirect if already authenticated as field representative
+    if (isAuthenticated && user?.role === 'field_representative') {
+      navigate('/dashboard');
     }
-  }, [navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleInputChange = (e) => {
     setFormData(prev => ({
@@ -67,25 +62,13 @@ const FieldRepresentativeLogin = () => {
           expiresIn: 3600
         };
         
-        // Store auth data
-        localStorage.setItem('auth_token', authData.accessToken);
-        localStorage.setItem('user_info', JSON.stringify(authData.user));
-        localStorage.setItem('auth_expires', (Date.now() + (authData.expiresIn * 1000)).toString());
+        // Use AuthContext login method
+        const loginSuccess = login(authData.user, authData.accessToken, authData.expiresIn);
         
-        // Log activity
-        const activityLog = {
-          timestamp: new Date().toISOString(),
-          userId: authData.user.nationalId,
-          userName: authData.user.name,
-          userRole: authData.user.role,
-          action: 'login',
-          sessionId: `session_${Date.now()}`,
-          userAgent: navigator.userAgent
-        };
-        
-        const existingLogs = JSON.parse(localStorage.getItem('auth_activity_logs') || '[]');
-        existingLogs.push(activityLog);
-        localStorage.setItem('auth_activity_logs', JSON.stringify(existingLogs));
+        if (!loginSuccess) {
+          notificationService.error('Failed to complete login');
+          return;
+        }
         
         notificationService.success(`Welcome, ${authData.user.name}!`);
         navigate('/dashboard');

@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Heart, Plus, List, Upload, Settings, BarChart3 } from 'lucide-react';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Navigation from './components/Navigation';
 import { PWAInstallPrompt, ConnectionStatus, MobileNavigation, MobileKeyboard } from './components/MobileComponents';
 import { Toaster } from './services/notificationService';
@@ -71,12 +73,40 @@ function AppContent() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login/field-representative" element={<FieldRepresentativeLogin />} />
               <Route path="/login/admin" element={<AdminLogin />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/add-child" element={<ChildForm />} />
-              <Route path="/records" element={<RecordsList />} />
-              <Route path="/sync" element={<Sync />} />
-              <Route path="/admin/dashboard" element={<AdminPortal />} />
-              <Route path="/analytics" element={<AnalyticsDashboard />} />
+              
+              {/* Protected Routes for Field Representatives */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute requiredRoles={['field_representative', 'admin']}>
+                  <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/add-child" element={
+                <ProtectedRoute requiredRoles={['field_representative', 'admin']}>
+                  <ChildForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/records" element={
+                <ProtectedRoute requiredRoles={['field_representative', 'admin']}>
+                  <RecordsList />
+                </ProtectedRoute>
+              } />
+              <Route path="/sync" element={
+                <ProtectedRoute requiredRoles={['field_representative', 'admin']}>
+                  <Sync />
+                </ProtectedRoute>
+              } />
+              
+              {/* Protected Routes for Admins Only */}
+              <Route path="/admin/dashboard" element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminPortal />
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute requiredRole="admin">
+                  <AnalyticsDashboard />
+                </ProtectedRoute>
+              } />
             </Routes>
           </main>
         </MobileKeyboard>
@@ -96,7 +126,9 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }

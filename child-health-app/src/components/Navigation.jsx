@@ -1,10 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3 } from 'lucide-react';
+import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3, LogOut, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import SehatSaathiLogo from '../assets/sehat-saathi-logo.svg';
 
 const Navigation = () => {
   const location = useLocation();
+  const { isAuthenticated, user, logout } = useAuth();
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
 
   React.useEffect(() => {
@@ -63,7 +65,7 @@ const Navigation = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
             <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
               isOnline 
                 ? 'bg-green-100 text-green-800' 
@@ -72,6 +74,29 @@ const Navigation = () => {
               {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
               <span>{isOnline ? 'Online' : 'Offline'}</span>
             </div>
+            
+            {/* User Authentication Status */}
+            {isAuthenticated && user ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-sm">
+                  <User className="h-4 w-4 text-gray-600" />
+                  <span className="text-gray-700">{user.name}</span>
+                  <span className="text-xs text-gray-500 capitalize">({user.role.replace('_', ' ')})</span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center space-x-1 px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                  title="Logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden md:inline">Logout</span>
+                </button>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">
+                Not logged in
+              </div>
+            )}
           </div>
         </div>
       </div>
