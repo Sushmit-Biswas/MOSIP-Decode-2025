@@ -2,6 +2,7 @@ import React from 'react';
 import { Upload, Wifi, WifiOff, CheckCircle, AlertCircle, Key } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
 import syncService from '../services/syncService';
+import activityLogger from '../services/activityLogger';
 
 const Sync = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
@@ -72,6 +73,12 @@ const Sync = () => {
     setIsUploading(true);
     setUploadStatus({ type: 'info', message: 'Uploading records...' });
 
+    // Log sync start
+    activityLogger.logActivity(activityLogger.ACTIONS.SYNC_STARTED, {
+      recordCount: pendingRecords.length,
+      isOnline
+    });
+
     try {
       const result = await syncService.forcSync();
       
@@ -81,6 +88,12 @@ const Sync = () => {
           message: result.message 
         });
         
+        // Log successful sync
+        activityLogger.logActivity(activityLogger.ACTIONS.SYNC_COMPLETED, {
+          recordCount: pendingRecords.length,
+          syncResult: result
+        });
+        
         // Reload pending records
         await loadPendingRecords();
       } else {
@@ -88,11 +101,24 @@ const Sync = () => {
           type: 'error', 
           message: result.message || 'Upload failed. Please try again.' 
         });
+        
+        // Log partial sync
+        activityLogger.logActivity(activityLogger.ACTIONS.SYNC_PARTIAL, {
+          recordCount: pendingRecords.length,
+          error: result.message,
+          syncResult: result
+        });
       }
-    } catch {
+    } catch (error) {
       setUploadStatus({ 
         type: 'error', 
         message: 'Upload failed. Please check your connection and try again.' 
+      });
+      
+      // Log sync failure
+      activityLogger.logActivity(activityLogger.ACTIONS.SYNC_FAILED, {
+        recordCount: pendingRecords.length,
+        error: error.message || 'Unknown error'
       });
     } finally {
       setIsUploading(false);

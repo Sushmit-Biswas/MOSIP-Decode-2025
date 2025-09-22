@@ -4,6 +4,7 @@ import childHealthDB from '../services/indexedDB';
 import apiService from '../services/apiService';
 import geolocationService from '../services/geolocationService';
 import notificationService from '../services/notificationService';
+import activityLogger from '../services/activityLogger';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -32,6 +33,12 @@ const ChildForm = () => {
   React.useEffect(() => {
     // Initialize IndexedDB when component mounts
     childHealthDB.init().catch(console.error);
+    
+    // Log page visit
+    activityLogger.logActivity(activityLogger.ACTIONS.PAGE_VISITED, {
+      page: 'Child Form',
+      path: '/add-child'
+    });
   }, []);
 
   const handleInputChange = (e) => {
@@ -77,6 +84,13 @@ const ChildForm = () => {
       reader.onload = (e) => {
         setFormData(prev => ({ ...prev, photo: e.target.result }));
         setValidationErrors(prev => ({ ...prev, photo: '' }));
+        
+        // Log photo capture
+        activityLogger.logActivity(activityLogger.ACTIONS.PHOTO_CAPTURED, {
+          fileSize: file.size,
+          fileType: file.type,
+          fileName: file.name
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -125,12 +139,27 @@ const ChildForm = () => {
     try {
       const location = await geolocationService.getLocationWithFallback();
       setLocationData(location);
+      
+      // Log location capture
+      activityLogger.logActivity(activityLogger.ACTIONS.LOCATION_CAPTURED, {
+        accuracy: location.accuracy,
+        coordinates: location.coordinateString,
+        method: isAutoCapture ? 'auto' : 'manual'
+      });
+      
       // Only show notification for manual captures, not auto-captures
       if (!isAutoCapture) {
         notificationService.locationCaptured(location.accuracy);
       }
     } catch (error) {
       setLocationError(error.message);
+      
+      // Log location failure
+      activityLogger.logActivity(activityLogger.ACTIONS.LOCATION_FAILED, {
+        error: error.message,
+        method: isAutoCapture ? 'auto' : 'manual'
+      });
+      
       // Only show notification if we don't already have a location and it's not an auto-capture
       if (!locationData && !isAutoCapture) {
         notificationService.locationFailed();
@@ -215,6 +244,18 @@ const ChildForm = () => {
       
       // Show Health ID generation notification
       notificationService.healthIdGenerated(healthId);
+      
+      // Log successful record creation
+      activityLogger.logActivity(activityLogger.ACTIONS.CHILD_RECORD_CREATED, {
+        healthId,
+        recordId: record.id,
+        childName: record.childName,
+        age: record.age,
+        savedToServer: serverSaveSuccess,
+        hasLocation: !!locationData,
+        hasPhoto: !!record.photo,
+        locationAccuracy: locationData?.accuracy
+      });
       
       // Reset form
       setFormData({
