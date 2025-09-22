@@ -11,9 +11,12 @@ import {
   Activity, 
   AlertTriangle,
   CheckCircle, 
-  Clock
+  Clock,
+  MapPin,
+  UserCheck
 } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
+import activityLogger from '../services/activityLogger';
 import RecordDetailsModal from '../components/RecordDetailsModal';
 import pdfService from '../services/pdfService';
 import notificationService from '../services/notificationService';
@@ -52,6 +55,357 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle }) => {
         </div>
         <div className={`p-3 rounded-full ${colorClasses[color] || colorClasses.blue}`}>
           <Icon className="h-6 w-6" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Activity Logs Tab Component
+const ActivityLogsTab = () => {
+  const [activities, setActivities] = React.useState([]);
+  const [filteredActivities, setFilteredActivities] = React.useState([]);
+  const [filters, setFilters] = React.useState({
+    action: '',
+    userRole: '',
+    dateFrom: '',
+    dateTo: new Date().toISOString().split('T')[0]
+  });
+  const [stats, setStats] = React.useState({});
+
+  const loadActivities = React.useCallback(() => {
+    const allActivities = activityLogger.getActivities();
+    const activityStats = activityLogger.getActivityStats();
+    setActivities(allActivities);
+    setStats(activityStats);
+  }, []);
+
+  const applyFilters = React.useCallback(() => {
+    const filtered = activityLogger.getFilteredActivities(filters);
+    setFilteredActivities(filtered);
+  }, [filters]);
+
+  React.useEffect(() => {
+    loadActivities();
+  }, [loadActivities]);
+
+  React.useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const exportLogs = () => {
+    const exportData = activityLogger.exportActivities(filters);
+    const blob = new Blob([exportData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notificationService.success('Activity logs exported successfully');
+  };
+
+  const getActionColor = (action) => {
+    const colorMap = {
+      'login': 'bg-green-100 text-green-800',
+      'logout': 'bg-gray-100 text-gray-800',
+      'child_record_created': 'bg-blue-100 text-blue-800',
+      'location_captured': 'bg-purple-100 text-purple-800',
+      'sync_started': 'bg-yellow-100 text-yellow-800',
+      'sync_completed': 'bg-green-100 text-green-800',
+      'sync_failed': 'bg-red-100 text-red-800',
+      'photo_captured': 'bg-indigo-100 text-indigo-800'
+    };
+    return colorMap[action] || 'bg-gray-100 text-gray-800';
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard
+          title="Total Activities"
+          value={stats.total || 0}
+          icon={Activity}
+          color="blue"
+        />
+        <StatCard
+          title="Active Users"
+          value={stats.users || 0}
+          icon={Users}
+          color="green"
+        />
+        <StatCard
+          title="Active Sessions"
+          value={stats.sessions || 0}
+          icon={Clock}
+          color="purple"
+        />
+        <StatCard
+          title="Today's Activities"
+          value={stats.dailyActivity?.[new Date().toISOString().split('T')[0]] || 0}
+          icon={TrendingUp}
+          color="yellow"
+        />
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Filters</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
+            <select
+              value={filters.action}
+              onChange={(e) => handleFilterChange('action', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Actions</option>
+              <option value="login">Login</option>
+              <option value="child_record_created">Record Created</option>
+              <option value="location_captured">Location Captured</option>
+              <option value="sync_started">Sync Started</option>
+              <option value="sync_completed">Sync Completed</option>
+              <option value="photo_captured">Photo Captured</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">User Role</label>
+            <select
+              value={filters.userRole}
+              onChange={(e) => handleFilterChange('userRole', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Roles</option>
+              <option value="field_representative">Field Representative</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div className="mt-4">
+          <button
+            onClick={exportLogs}
+            className="btn-secondary flex items-center space-x-2"
+          >
+            <Download className="h-4 w-4" />
+            <span>Export Logs</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Activities List */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Recent Activities</h3>
+          <p className="text-sm text-gray-500">Showing {filteredActivities.length} activities</p>
+        </div>
+        <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+          {filteredActivities.length > 0 ? (
+            filteredActivities.slice(0, 100).map((activity) => (
+              <div key={activity.id} className="p-6 hover:bg-gray-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getActionColor(activity.action)}`}>
+                        {activity.action.replace('_', ' ')}
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {new Date(activity.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-900 mb-1">
+                      <strong>{activity.user?.name || 'Unknown User'}</strong> 
+                      <span className="text-gray-600"> ({activity.user?.role?.replace('_', ' ') || 'Unknown Role'})</span>
+                    </div>
+                    {activity.details && Object.keys(activity.details).length > 0 && (
+                      <div className="text-xs text-gray-500 mt-2">
+                        {Object.entries(activity.details).map(([key, value]) => (
+                          <span key={key} className="mr-4">
+                            <strong>{key}:</strong> {String(value)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {activity.location && (
+                      <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>{activity.location.coordinateString} (±{Math.round(activity.location.accuracy)}m)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-6 text-center text-gray-500">
+              No activities found matching the current filters.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Field Representatives Tab Component
+const FieldRepsTab = () => {
+  const [fieldReps, setFieldReps] = React.useState([]);
+  const [activities, setActivities] = React.useState([]);
+
+  React.useEffect(() => {
+    loadFieldRepData();
+  }, []);
+
+  const loadFieldRepData = () => {
+    const allActivities = activityLogger.getActivities();
+    const stats = activityLogger.getActivityStats();
+    
+    // Extract field rep information from activities
+    const repsData = Object.entries(stats.userActivity)
+      .filter(([, data]) => data.role === 'field_representative')
+      .map(([userId, data]) => ({
+        id: userId,
+        ...data,
+        userId
+      }));
+    
+    setFieldReps(repsData);
+    setActivities(allActivities.filter(a => a.user?.role === 'field_representative'));
+  };
+
+  const getRepStatus = (lastActivity) => {
+    const now = new Date();
+    const last = new Date(lastActivity);
+    const diffHours = (now - last) / (1000 * 60 * 60);
+    
+    if (diffHours < 1) return { status: 'active', color: 'bg-green-100 text-green-800', text: 'Active' };
+    if (diffHours < 24) return { status: 'recent', color: 'bg-yellow-100 text-yellow-800', text: 'Recent' };
+    return { status: 'inactive', color: 'bg-gray-100 text-gray-800', text: 'Inactive' };
+  };
+
+  const getRepLocation = (userId) => {
+    const userActivities = activities
+      .filter(a => a.user?.nationalId === userId && a.location)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    return userActivities[0]?.location || null;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Total Field Representatives"
+          value={fieldReps.length}
+          icon={UserCheck}
+          color="blue"
+        />
+        <StatCard
+          title="Active Today"
+          value={fieldReps.filter(rep => {
+            const { status } = getRepStatus(rep.lastActivity);
+            return status === 'active';
+          }).length}
+          icon={Activity}
+          color="green"
+        />
+        <StatCard
+          title="Total Records Created"
+          value={fieldReps.reduce((sum, rep) => sum + (rep.actions?.child_record_created || 0), 0)}
+          icon={FileText}
+          color="purple"
+        />
+      </div>
+
+      {/* Field Representatives List */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Field Representatives</h3>
+          <p className="text-sm text-gray-500">Monitor field representative activities and locations</p>
+        </div>
+        <div className="divide-y divide-gray-200">
+          {fieldReps.length > 0 ? (
+            fieldReps.map((rep) => {
+              const { color, text } = getRepStatus(rep.lastActivity);
+              const location = getRepLocation(rep.userId);
+              
+              return (
+                <div key={rep.id} className="p-6 hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h4 className="text-lg font-medium text-gray-900">{rep.name}</h4>
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${color}`}>
+                          {text}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                        <div>
+                          <span className="font-medium">ID:</span> {rep.userId}
+                        </div>
+                        <div>
+                          <span className="font-medium">Total Activities:</span> {rep.count}
+                        </div>
+                        <div>
+                          <span className="font-medium">Last Active:</span> {new Date(rep.lastActivity).toLocaleString()}
+                        </div>
+                      </div>
+                      
+                      {/* Activity Breakdown */}
+                      <div className="mt-3">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Activity Breakdown:</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(rep.actions || {}).map(([action, count]) => (
+                            <span key={action} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                              {action.replace('_', ' ')}: {count}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Location Information */}
+                      {location && (
+                        <div className="mt-3 flex items-center space-x-2 text-sm text-gray-600">
+                          <MapPin className="h-4 w-4" />
+                          <span>Last Location: {location.coordinateString} (±{Math.round(location.accuracy)}m)</span>
+                          <span className="text-xs text-gray-500">
+                            - {new Date(location.formattedTime).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-6 text-center text-gray-500">
+              No field representative data available.
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -435,6 +789,20 @@ const AdminPortal = () => {
           active={activeTab === 'analytics'} 
           onClick={setActiveTab} 
         />
+        <TabButton 
+          id="activity-logs" 
+          label="Activity Logs" 
+          icon={Activity} 
+          active={activeTab === 'activity-logs'} 
+          onClick={setActiveTab} 
+        />
+        <TabButton 
+          id="field-reps" 
+          label="Field Representatives" 
+          icon={UserCheck} 
+          active={activeTab === 'field-reps'} 
+          onClick={setActiveTab} 
+        />
       </div>
 
       {/* Overview Tab */}
@@ -807,6 +1175,16 @@ const AdminPortal = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Activity Logs Tab */}
+      {activeTab === 'activity-logs' && (
+        <ActivityLogsTab />
+      )}
+
+      {/* Field Representatives Tab */}
+      {activeTab === 'field-reps' && (
+        <FieldRepsTab />
       )}
 
       {/* Record Details Modal */}
