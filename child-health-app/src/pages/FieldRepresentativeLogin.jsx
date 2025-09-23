@@ -33,6 +33,28 @@ const FieldRepresentativeLogin = () => {
       setOtpSent(true);
     }
   };
+
+  const handleSendOtp = async () => {
+    if (!formData.nationalId) {
+      notificationService.error('Please enter your National ID first');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Simulate OTP sending
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setOtpSent(true);
+      notificationService.success('OTP sent to your registered mobile/email');
+    } catch (err) {
+      console.error('OTP send error:', err);
+      notificationService.error('Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!formData.nationalId || !formData.otp) {
@@ -81,13 +103,6 @@ const FieldRepresentativeLogin = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleInputChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
   };
 
   return (
