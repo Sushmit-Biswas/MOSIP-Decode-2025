@@ -9,6 +9,7 @@ const FieldRepresentativeLogin = () => {
   const { login, isAuthenticated, user } = useAuth();
   const [formData, setFormData] = useState({
     nationalId: '',
+    username: '',
     otp: ''
   });
   const [showOtp, setShowOtp] = useState(false);
@@ -28,15 +29,16 @@ const FieldRepresentativeLogin = () => {
       [e.target.name]: e.target.value
     }));
     
-    // Auto-show OTP field when nationalId is entered
-    if (e.target.name === 'nationalId' && e.target.value.trim()) {
+    // Auto-show OTP field when nationalId and username are entered
+    if ((e.target.name === 'nationalId' || e.target.name === 'username') && 
+        formData.nationalId.trim() && formData.username.trim()) {
       setOtpSent(true);
     }
   };
 
   const handleSendOtp = async () => {
-    if (!formData.nationalId) {
-      notificationService.error('Please enter your National ID first');
+    if (!formData.nationalId || !formData.username) {
+      notificationService.error('Please enter both National ID and Username first');
       return;
     }
 
@@ -73,9 +75,11 @@ const FieldRepresentativeLogin = () => {
           success: true,
           user: {
             nationalId: formData.nationalId,
-            name: formData.nationalId === '2304715938' ? 'Priya Sharma' : 
+            name: formData.username || 
+                  (formData.nationalId === '2304715938' ? 'Priya Sharma' : 
                   formData.nationalId === '1234567890' ? 'Amit Kumar' : 
-                  'Field Representative',
+                  'Field Representative'),
+            username: formData.username,
             role: 'field_representative',
             email: 'field@sehat-saathi.org',
             loginTime: new Date().toISOString()
