@@ -6,10 +6,12 @@ import geolocationService from '../services/geolocationService';
 import notificationService from '../services/notificationService';
 import activityLogger from '../services/activityLogger';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 
 const ChildForm = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const hasInitializedLocation = React.useRef(false);
   
   const [formData, setFormData] = React.useState({
@@ -208,9 +210,11 @@ const ChildForm = () => {
     }
 
     setIsSubmitting(true);
-    const loadingToast = notificationService.loading('Saving child record...');
-
+    let loadingToast = null;
+    
     try {
+      loadingToast = notificationService.loading('Saving child record...');
+      
       const healthId = `CHR${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`;
       
       const record = {
@@ -218,9 +222,9 @@ const ChildForm = () => {
         healthId,
         id: Date.now(),
         timestamp: new Date().toISOString(),
-        representativeId: 'current_user', // This would come from auth context
+        representativeId: user?.nationalId || 'unknown',
         location: locationData,
-        uploaded: false // Will be set to true if successfully saved to server
+        uploaded: false
       };
 
       // Try to save to server if online
@@ -230,9 +234,9 @@ const ChildForm = () => {
       if (isOnline) {
         try {
           const response = await apiService.createChild(record);
-          if (response.success) {
+          if (response && response.success) {
             record.uploaded = true;
-            record.serverId = response.data._id;
+            record.serverId = response.data?._id;
             serverSaveSuccess = true;
             console.log('✅ Record saved to server');
           }
@@ -242,33 +246,43 @@ const ChildForm = () => {
       }
 
       // Always save to IndexedDB for offline access
-      await childHealthDB.saveChildRecord(record);
+      try {
+        await childHealthDB.saveChildRecord(record);
+        console.log('✅ Record saved to IndexedDB');
+      } catch (dbError) {
+        console.error('❌ Failed to save to IndexedDB:', dbError);
+        throw new Error('Failed to save record locally');
+      }
 
       // Dismiss loading toast
-      notificationService.dismiss(loadingToast);
+      if (loadingToast) {
+        notificationService.dismiss(loadingToast);
+        loadingToast = null;
+      }
 
       // Show success message with Health ID
       if (serverSaveSuccess) {
-        notificationService.success('Child record saved and uploaded successfully!');
+        notificationService.success(`Child record saved! Health ID: ${healthId}`);
       } else {
-        notificationService.info('Child record saved locally. Will sync when online.');
+        notificationService.info(`Record saved locally. Health ID: ${healthId}`);
       }
       
-      // Show Health ID generation notification
-      notificationService.healthIdGenerated(healthId);
-      
       // Log successful record creation
-      if (activityLogger && activityLogger.ACTIONS) {
-        activityLogger.logActivity(activityLogger.ACTIONS.CHILD_RECORD_CREATED, {
-          healthId,
-          recordId: record.id,
-          childName: record.childName,
-          age: record.age,
-          savedToServer: serverSaveSuccess,
-          hasLocation: !!locationData,
-          hasPhoto: !!record.photo,
-          locationAccuracy: locationData?.accuracy
-        });
+      try {
+        if (activityLogger && activityLogger.ACTIONS && activityLogger.ACTIONS.CHILD_RECORD_CREATED) {
+          activityLogger.logActivity(activityLogger.ACTIONS.CHILD_RECORD_CREATED, {
+            healthId,
+            recordId: record.id,
+            childName: record.childName,
+            age: record.age,
+            savedToServer: serverSaveSuccess,
+            hasLocation: !!locationData,
+            hasPhoto: !!record.photo,
+            locationAccuracy: locationData?.accuracy
+          });
+        }
+      } catch (logError) {
+        console.warn('Failed to log activity:', logError);
       }
       
       // Reset form
@@ -293,9 +307,12 @@ const ChildForm = () => {
       }, 2000);
 
     } catch (error) {
-      notificationService.dismiss(loadingToast);
+      // Ensure loading toast is dismissed
+      if (loadingToast) {
+        notificationService.dismiss(loadingToast);
+      }
       console.error('Error saving record:', error);
-      notificationService.error('Error saving record. Please try again.');
+      notificationService.error(`Error saving record: ${error.message || 'Please try again.'}`);
     } finally {
       setIsSubmitting(false);
     }
