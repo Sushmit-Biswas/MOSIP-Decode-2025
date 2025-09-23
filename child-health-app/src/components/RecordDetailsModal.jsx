@@ -68,17 +68,18 @@ const RecordDetailsModal = ({ record, isOpen, onClose }) => {
 
   const copyHealthId = () => {
     navigator.clipboard.writeText(record.healthId);
-    notificationService.success('Health ID copied to clipboard!');
+    notificationService.info('Health ID copied to clipboard!');
   };
 
-  const bmi = calculateBMI(record.weight, record.height);
+  // Use stored BMI if available, otherwise calculate it
+  const bmi = record.bmi || calculateBMI(record.weight, record.height);
   const bmiCategory = getBMICategory(bmi);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 mx-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 text-white">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 text-white rounded-t-xl">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold">Child Health Record Details</h2>
@@ -86,7 +87,7 @@ const RecordDetailsModal = ({ record, isOpen, onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors"
+              className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-white hover:bg-opacity-20"
             >
               <X className="h-6 w-6" />
             </button>
@@ -94,7 +95,7 @@ const RecordDetailsModal = ({ record, isOpen, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="p-6 max-h-[75vh] overflow-y-auto">
           {/* Health ID Card */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between">

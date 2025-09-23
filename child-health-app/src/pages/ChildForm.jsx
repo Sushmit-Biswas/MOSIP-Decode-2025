@@ -204,11 +204,7 @@ const ChildForm = () => {
     e.preventDefault();
     
     if (!validateForm()) {
-      try {
-        notificationService.error('Please fill in all required fields');
-      } catch {
-        alert('Please fill in all required fields');
-      }
+      notificationService.error('Please fill in all required fields');
       return;
     }
 
@@ -217,9 +213,31 @@ const ChildForm = () => {
     try {
       const healthId = `CHR${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`;
       
+      // Calculate BMI for the record
+      const bmi = calculateBMI();
+      
+      // Check for duplicate records
+      try {
+        const existingRecords = await childHealthDB.getAllChildRecords();
+        const isDuplicate = existingRecords.some(record => 
+          record.childName.toLowerCase().trim() === formData.childName.toLowerCase().trim() &&
+          record.age === formData.age &&
+          record.parentName.toLowerCase().trim() === formData.parentName.toLowerCase().trim()
+        );
+        
+        if (isDuplicate) {
+          notificationService.warning('A record with similar details already exists. Please verify the information.');
+          setIsSubmitting(false);
+          return;
+        }
+      } catch (duplicateCheckError) {
+        console.warn('Could not check for duplicates:', duplicateCheckError);
+      }
+      
       const record = {
         ...formData,
         healthId,
+        bmi: bmi || null,
         id: Date.now(),
         timestamp: new Date().toISOString(),
         representativeId: user?.nationalId || 'unknown',
@@ -239,10 +257,16 @@ const ChildForm = () => {
       }
 
       // Show success message
+      notificationService.success(`Child record saved! Health ID: ${healthId}`);
+      
+      // Auto-copy Health ID to clipboard
       try {
-        notificationService.success(`Child record saved! Health ID: ${healthId}`);
-      } catch {
-        alert(`Child record saved! Health ID: ${healthId}`);
+        await navigator.clipboard.writeText(healthId);
+        setTimeout(() => {
+          notificationService.info('Health ID copied to clipboard!');
+        }, 1000);
+      } catch (clipboardError) {
+        console.warn('Could not copy to clipboard:', clipboardError);
       }
       
       // Log successful record creation
@@ -284,12 +308,8 @@ const ChildForm = () => {
       }, 1500);
 
     } catch (error) {
-      console.error('Error saving record:', error);
-      try {
-        notificationService.error(`Error saving record: ${error.message || 'Please try again.'}`);
-      } catch {
-        alert(`Error saving record: ${error.message || 'Please try again.'}`);
-      }
+      console.error('❌ Error in handleSubmit:', error);
+      notificationService.error(`Error saving record: ${error.message || 'Please try again.'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -357,43 +377,13 @@ const ChildForm = () => {
                       setFormData(prev => ({ ...prev, age: value.toString() }));
                     }
                   }}
-                  className={`form-input pr-20 ${validationErrors.age ? 'border-red-500' : ''}`}
+                  className={`form-input ${validationErrors.age ? 'border-red-500' : ''}`}
                   min="0"
                   max="18"
                   step="1"
                   placeholder="Enter age (0-18)"
                   required
                 />
-                <div className="absolute right-1 top-1 bottom-1 flex flex-col">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentAge = parseInt(formData.age) || 0;
-                      if (currentAge < 18) {
-                        setFormData(prev => ({ ...prev, age: (currentAge + 1).toString() }));
-                      }
-                    }}
-                    className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-t border-b border-gray-300 transition-colors"
-                    aria-label="Increase age by 1"
-                    title="Increase age by 1"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentAge = parseInt(formData.age) || 0;
-                      if (currentAge > 0) {
-                        setFormData(prev => ({ ...prev, age: (currentAge - 1).toString() }));
-                      }
-                    }}
-                    className="flex-1 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-b transition-colors"
-                    aria-label="Decrease age by 1"
-                    title="Decrease age by 1"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </button>
-                </div>
               </div>
               {validationErrors.age && (
                 <p className="text-red-500 text-sm mt-1 flex items-center">

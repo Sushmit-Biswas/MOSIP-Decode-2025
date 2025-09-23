@@ -47,20 +47,19 @@ class NotificationService {
   // Helper to manage notification limits
   manageNotificationLimit() {
     try {
-      // Safely check for toast state
-      if (toast && toast._state && toast._state.toasts) {
-        const activeToasts = toast._state.toasts.filter(t => t.visible);
-        
-        // If we're at or above the limit, dismiss the oldest toast(s)
-        while (activeToasts.length >= this.maxNotifications) {
-          const oldestToast = activeToasts.shift();
-          if (oldestToast) {
-            toast.dismiss(oldestToast.id);
-          }
-        }
+      // Use a simpler approach that doesn't rely on internal toast state
+      const currentTime = Date.now();
+      const recentToasts = Array.from(this.activeNotifications.values())
+        .filter(timestamp => currentTime - timestamp < 10000); // Last 10 seconds
+      
+      if (recentToasts.length >= this.maxNotifications) {
+        toast.dismiss(); // Dismiss all toasts
+        this.activeNotifications.clear();
       }
-    } catch (error) {
-      console.warn('Failed to manage notification limit:', error);
+    } catch {
+      // If anything fails, just clear everything
+      toast.dismiss();
+      this.activeNotifications.clear();
     }
   }
 
@@ -71,7 +70,7 @@ class NotificationService {
     
     this.manageNotificationLimit();
     
-    return toast.success(message, {
+    const toastId = toast.success(message, {
       ...this.defaultOptions,
       icon: '✅',
       style: {
@@ -82,6 +81,12 @@ class NotificationService {
       dismiss: true, // Enable manual dismissal
       ...options,
     });
+
+    if (toastId) {
+      this.activeNotifications.set(toastId, Date.now());
+    }
+
+    return toastId;
   }
 
   error(message, options = {}) {
@@ -91,7 +96,7 @@ class NotificationService {
     
     this.manageNotificationLimit();
     
-    return toast.error(message, {
+    const toastId = toast.error(message, {
       ...this.defaultOptions,
       icon: '❌',
       style: {
@@ -103,6 +108,12 @@ class NotificationService {
       dismiss: true, // Enable manual dismissal
       ...options,
     });
+
+    if (toastId) {
+      this.activeNotifications.set(toastId, Date.now());
+    }
+
+    return toastId;
   }
 
   info(message, options = {}) {
@@ -112,7 +123,7 @@ class NotificationService {
     
     this.manageNotificationLimit();
     
-    return toast(message, {
+    const toastId = toast(message, {
       ...this.defaultOptions,
       icon: 'ℹ️',
       style: {
@@ -123,6 +134,12 @@ class NotificationService {
       dismiss: true, // Enable manual dismissal
       ...options,
     });
+
+    if (toastId) {
+      this.activeNotifications.set(toastId, Date.now());
+    }
+
+    return toastId;
   }
 
   warning(message, options = {}) {
@@ -132,7 +149,7 @@ class NotificationService {
     
     this.manageNotificationLimit();
     
-    return toast(message, {
+    const toastId = toast(message, {
       ...this.defaultOptions,
       icon: '⚠️',
       style: {
@@ -143,6 +160,12 @@ class NotificationService {
       dismiss: true, // Enable manual dismissal
       ...options,
     });
+
+    if (toastId) {
+      this.activeNotifications.set(toastId, Date.now());
+    }
+
+    return toastId;
   }
 
   loading(message = 'Loading...', options = {}) {
@@ -179,8 +202,10 @@ class NotificationService {
     try {
       if (toastId) {
         toast.dismiss(toastId);
+        this.activeNotifications.delete(toastId);
       } else {
         toast.dismiss();
+        this.activeNotifications.clear();
       }
     } catch (error) {
       console.warn('Failed to dismiss toast:', error);
