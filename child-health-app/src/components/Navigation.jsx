@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3, LogOut, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import SehatSaathiLogo from '../assets/sehat-saathi-logo.svg';
+import SehatSaathiLogo from '../images/logo_without_bg.png';
 
 const Navigation = () => {
   const location = useLocation();

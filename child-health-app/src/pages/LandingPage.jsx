@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Users, UserCheck } from 'lucide-react';
-import SehatSaathiLogo from '../assets/sehat-saathi-logo.svg';
+import SehatSaathiLogo from '../images/logo_without_bg.png';
 
 const LandingPage = () => {
   return (
