@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Heart, Plus, List, Upload, Settings, BarChart3 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import { PWAInstallPrompt, ConnectionStatus, MobileNavigation, MobileKeyboard } from './components/MobileComponents';
 import { Toaster } from './services/notificationService';
+import performanceMonitor from './services/performanceMonitor';
 import LandingPage from './pages/LandingPage';
 import FieldRepresentativeLogin from './pages/FieldRepresentativeLogin';
 import AdminLogin from './pages/AdminLogin';
@@ -20,6 +22,30 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Track page navigation performance
+  useEffect(() => {
+    const startTime = performance.now();
+    
+    const handlePageLoad = () => {
+      const loadTime = performance.now() - startTime;
+      performanceMonitor.trackInteraction('page-navigation', location.pathname, {
+        loadTime,
+        path: location.pathname
+      });
+    };
+
+    // Track page load completion
+    if (document.readyState === 'complete') {
+      handlePageLoad();
+    } else {
+      window.addEventListener('load', handlePageLoad);
+    }
+
+    return () => {
+      window.removeEventListener('load', handlePageLoad);
+    };
+  }, [location.pathname]);
+
   const mobileNavItems = [
     { path: '/dashboard', icon: Heart, label: 'Home' },
     { path: '/add-child', icon: Plus, label: 'Add' },
@@ -28,6 +54,7 @@ function AppContent() {
   ];
 
   const handleMobileNavigate = (path) => {
+    performanceMonitor.trackInteraction('mobile-navigation', 'bottom-nav', { targetPath: path });
     navigate(path);
   };
 
@@ -125,11 +152,13 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

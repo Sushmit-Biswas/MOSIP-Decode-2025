@@ -1,34 +1,49 @@
-// Service Worker for Child Health Record PWA
-const CACHE_NAME = 'child-health-v1.0.0';
-const STATIC_CACHE = 'child-health-static-v1';
-const DYNAMIC_CACHE = 'child-health-dynamic-v1';
+// Enhanced Service Worker for Child Health Record PWA
+const CACHE_NAME = 'child-health-v1.1.0';
+const STATIC_CACHE = 'child-health-static-v1.1';
+const DYNAMIC_CACHE = 'child-health-dynamic-v1.1';
+const API_CACHE = 'child-health-api-v1.1';
 
-// Static assets to cache immediately
+// Performance monitoring
+let performanceMetrics = {
+  cacheHits: 0,
+  cacheMisses: 0,
+  networkRequests: 0,
+  startTime: Date.now()
+};
+
+// Static assets to cache immediately (optimized list)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/src/main.jsx',
-  '/src/App.jsx',
-  '/src/index.css',
-  '/src/App.css',
-  // Add other static assets
-  '/offline.html' // We'll create this
+  '/icons/logo.svg',
+  // Core app files will be added dynamically
+];
+
+// API endpoints to cache
+const API_ENDPOINTS = [
+  '/api/children',
+  '/api/auth',
+  '/api/sync'
 ];
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker');
+  console.log('[SW] Installing Service Worker v1.1.0');
   event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => {
+    Promise.all([
+      caches.open(STATIC_CACHE).then((cache) => {
         console.log('[SW] Precaching static assets');
-        return cache.addAll(STATIC_ASSETS.filter(url => url !== '/offline.html')); // Skip offline.html for now
-      })
-      .then(() => {
-        console.log('[SW] Skip waiting');
-        return self.skipWaiting();
-      })
+        return cache.addAll(STATIC_ASSETS);
+      }),
+      caches.open(API_CACHE) // Initialize API cache
+    ]).then(() => {
+      console.log('[SW] Skip waiting for immediate activation');
+      return self.skipWaiting();
+    }).catch((error) => {
+      console.error('[SW] Installation failed:', error);
+    })
   );
 });
 
