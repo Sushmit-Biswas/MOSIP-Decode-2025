@@ -318,17 +318,20 @@ class PDFService {
     pdf.setFontSize(10);
     pdf.setFont(undefined, 'bold');
     pdf.setTextColor(0, 0, 0);
-    pdf.text(field, x, y);
+    pdf.text(String(field || ''), x, y);
     
     pdf.setFont(undefined, 'normal');
     pdf.setTextColor(75, 85, 99);
     
-    if (multiline && value.length > 50) {
-      const lines = pdf.splitTextToSize(value, 150);
+    // Ensure value is a string
+    const stringValue = String(value || 'N/A');
+    
+    if (multiline && stringValue.length > 50) {
+      const lines = pdf.splitTextToSize(stringValue, 150);
       pdf.text(lines, x + 45, y);
       return y + (lines.length * 5) + 5;
     } else {
-      pdf.text(value, x + 45, y);
+      pdf.text(stringValue, x + 45, y);
       return y + 8;
     }
   }
@@ -366,7 +369,9 @@ class PDFService {
           }
         }
         
-        pdf.text(cell, cellX + 2, cellY);
+        // Ensure cell content is a string
+        const cellContent = String(cell || '');
+        pdf.text(cellContent, cellX + 2, cellY);
       });
     });
     

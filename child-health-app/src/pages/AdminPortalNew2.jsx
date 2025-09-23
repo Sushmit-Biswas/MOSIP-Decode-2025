@@ -250,6 +250,23 @@ const AdminPortalNew = () => {
     }
   };
 
+  const handleDownloadActivityLogsTXT = async () => {
+    try {
+      setShowExportMenu(false);
+      const loadingToast = notificationService.loading('Generating activity logs TXT...');
+      const txtContent = exportService.generateActivityLogsTXT();
+      notificationService.dismiss(loadingToast);
+      
+      const filename = `sehat-saathi-activity-logs-${new Date().toISOString().split('T')[0]}.txt`;
+      exportService.downloadFile(txtContent, filename, 'text/plain;charset=utf-8;');
+      
+      notificationService.success('Activity logs TXT downloaded successfully!');
+    } catch (error) {
+      console.error('Activity logs TXT generation failed:', error);
+      notificationService.error('Failed to generate activity logs TXT: ' + error.message);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -421,6 +438,13 @@ const AdminPortalNew = () => {
                     >
                       <span>📋</span>
                       <span>Activity Logs (CSV)</span>
+                    </button>
+                    <button
+                      onClick={handleDownloadActivityLogsTXT}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                    >
+                      <span>📄</span>
+                      <span>Activity Logs (TXT)</span>
                     </button>
                   </div>
                 </div>

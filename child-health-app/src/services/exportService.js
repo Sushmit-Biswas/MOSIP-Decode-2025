@@ -199,6 +199,38 @@ class ExportService {
   }
 
   /**
+   * Generate Activity Logs TXT
+   */
+  generateActivityLogsTXT() {
+    try {
+      const logs = JSON.parse(localStorage.getItem('auth_activity_logs') || '[]');
+      
+      if (logs.length === 0) {
+        throw new Error('No activity logs to export');
+      }
+
+      let txtContent = '=== SEHAT SAATHI ACTIVITY LOGS ===\\n\\n';
+      txtContent += `Generated on: ${new Date().toISOString()}\\n`;
+      txtContent += `Total logs: ${logs.length}\\n\\n`;
+      txtContent += ''.padEnd(80, '=') + '\\n\\n';
+
+      logs.forEach((log, index) => {
+        txtContent += `[${index + 1}] ${new Date(log.timestamp).toLocaleString()}\\n`;
+        txtContent += `    User: ${log.userName || 'Unknown'} (ID: ${log.userId || 'N/A'})\\n`;
+        txtContent += `    Role: ${log.userRole || 'N/A'}\\n`;
+        txtContent += `    Action: ${log.action || 'N/A'}\\n`;
+        txtContent += `    Session: ${log.sessionId || 'N/A'}\\n`;
+        txtContent += `    User Agent: ${log.userAgent || 'N/A'}\\n`;
+        txtContent += ''.padEnd(80, '-') + '\\n\\n';
+      });
+
+      return txtContent;
+    } catch (error) {
+      throw new Error('Failed to generate activity logs TXT: ' + error.message);
+    }
+  }
+
+  /**
    * Download file with given content and filename
    */
   downloadFile(content, filename, mimeType = 'text/plain') {
