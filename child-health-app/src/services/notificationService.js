@@ -16,7 +16,7 @@ class NotificationService {
     };
     
     // Track active notifications to prevent duplicates
-    this.activeNotifications = new Set();
+    this.activeNotifications = new Map(); // Change to Map to track toast IDs and timestamps
     this.maxNotifications = 3;
     this.recentMessages = new Map(); // Track recent messages to prevent spam
   }
@@ -47,17 +47,23 @@ class NotificationService {
   // Helper to manage notification limits
   manageNotificationLimit() {
     try {
-      // Use a simpler approach that doesn't rely on internal toast state
       const currentTime = Date.now();
-      const recentToasts = Array.from(this.activeNotifications.values())
-        .filter(timestamp => currentTime - timestamp < 10000); // Last 10 seconds
       
-      if (recentToasts.length >= this.maxNotifications) {
+      // Clean up old notifications (older than 10 seconds)
+      for (const [toastId, timestamp] of this.activeNotifications.entries()) {
+        if (currentTime - timestamp > 10000) {
+          this.activeNotifications.delete(toastId);
+        }
+      }
+      
+      // If we have too many active notifications, dismiss all and clear
+      if (this.activeNotifications.size >= this.maxNotifications) {
         toast.dismiss(); // Dismiss all toasts
         this.activeNotifications.clear();
       }
-    } catch {
-      // If anything fails, just clear everything
+    } catch (error) {
+      console.warn('Notification management error:', error);
+      // Fallback: clear everything
       toast.dismiss();
       this.activeNotifications.clear();
     }
