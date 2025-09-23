@@ -13,7 +13,7 @@ export const useOnlineStatus = () => {
       const checkConnection = async () => {
         try {
           // Try to fetch a small image with cache-busting
-          await fetch('/icons/sehat-saathi-logo.svg?t=' + Date.now(), {
+          await fetch('/icons/logo_without_bg.png?t=' + Date.now(), {
             method: 'HEAD',
             mode: 'no-cors',
             cache: 'no-cache'

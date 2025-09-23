@@ -1,13 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3, LogOut, User } from 'lucide-react';
+import { Heart, Plus, List, Upload, Settings, BarChart3, LogOut, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
+import logoWithoutBg from '../images/logo_without_bg.png';
 
 const Navigation = () => {
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
-  const isOnline = useOnlineStatus();
 
   // Hide navigation on login pages and landing page
   const hideNavigation = [
@@ -55,7 +54,7 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
-              <img src="/icons/sehat-saathi-logo.svg" alt="Sehat Saathi" className="h-10 w-10" />
+              <img src={logoWithoutBg} alt="Sehat Saathi" className="h-10 w-10" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-gray-900">Sehat Saathi</span>
                 <span className="text-xs text-gray-600">Child Health Records</span>
@@ -84,15 +83,6 @@ const Navigation = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-              isOnline 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-              <span>{isOnline ? 'Online' : 'Offline'}</span>
-            </div>
-            
             {/* User Authentication Status */}
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-3">
