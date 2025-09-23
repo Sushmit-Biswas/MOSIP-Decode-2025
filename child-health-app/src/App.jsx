@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from
 import { Heart, Plus, List, Upload, Settings, BarChart3 } from 'lucide-react';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import LoginRedirect from './components/LoginRedirect';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navigation from './components/Navigation';
 import { PWAInstallPrompt, ConnectionStatus, MobileNavigation, MobileKeyboard } from './components/MobileComponents';
@@ -98,8 +99,16 @@ function AppContent() {
           <main className="container mx-auto px-4 py-8">
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/login/field-representative" element={<FieldRepresentativeLogin />} />
-              <Route path="/login/admin" element={<AdminLogin />} />
+              <Route path="/login/field-representative" element={
+                <LoginRedirect>
+                  <FieldRepresentativeLogin />
+                </LoginRedirect>
+              } />
+              <Route path="/login/admin" element={
+                <LoginRedirect>
+                  <AdminLogin />
+                </LoginRedirect>
+              } />
               
               {/* Protected Routes for Field Representatives */}
               <Route path="/dashboard" element={

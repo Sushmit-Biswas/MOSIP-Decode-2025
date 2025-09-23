@@ -22,14 +22,45 @@ const Navigation = () => {
     };
   }, []);
 
-  const navItems = [
-    { path: '/', icon: Heart, label: 'Dashboard' },
-    { path: '/add-child', icon: Plus, label: 'Add Child' },
-    { path: '/records', icon: List, label: 'Records' },
-    { path: '/sync', icon: Upload, label: 'Sync' },
-    { path: '/admin', icon: Settings, label: 'Admin' },
-    { path: '/analytics', icon: BarChart3, label: 'Analytics' },
-  ];
+  // Hide navigation on login pages and landing page
+  const hideNavigation = [
+    '/',
+    '/login/field-representative',
+    '/login/admin'
+  ].includes(location.pathname);
+
+  if (hideNavigation) {
+    return null;
+  }
+
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    if (!isAuthenticated || !user) return [];
+
+    const commonItems = [
+      { path: '/dashboard', icon: Heart, label: 'Dashboard' }
+    ];
+
+    if (user.role === 'admin') {
+      return [
+        ...commonItems,
+        { path: '/admin/dashboard', icon: Settings, label: 'Admin Portal' },
+        { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+        { path: '/records', icon: List, label: 'All Records' },
+      ];
+    } else if (user.role === 'field_representative') {
+      return [
+        ...commonItems,
+        { path: '/add-child', icon: Plus, label: 'Add Child' },
+        { path: '/records', icon: List, label: 'My Records' },
+        { path: '/sync', icon: Upload, label: 'Sync Data' },
+      ];
+    }
+
+    return commonItems;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <nav className="bg-white shadow-sm border-b">

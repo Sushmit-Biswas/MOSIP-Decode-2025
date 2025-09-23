@@ -438,62 +438,6 @@ const AdminPortal = () => {
     recentIllnessCases: 0
   });
 
-  React.useEffect(() => {
-    loadRecords();
-  }, [loadRecords]);
-
-  const calculateStats = React.useCallback(() => {
-    if (records.length === 0) return;
-
-    const representatives = new Set(records.map(r => r.representativeId).filter(Boolean));
-    let totalBMI = 0;
-    let bmiCount = 0;
-    let underweight = 0;
-    let normal = 0;
-    let overweight = 0;
-    let malnutrition = 0;
-    let recentIllness = 0;
-
-    records.forEach(record => {
-      // BMI calculations
-      if (record.weight && record.height) {
-        const heightInM = record.height / 100;
-        const bmi = record.weight / (heightInM * heightInM);
-        totalBMI += bmi;
-        bmiCount++;
-
-        if (bmi < 18.5) underweight++;
-        else if (bmi < 25) normal++;
-        else overweight++;
-      }
-
-      // Health conditions
-      if (record.malnutritionSigns && record.malnutritionSigns !== 'N/A' && record.malnutritionSigns.trim() !== '') {
-        malnutrition++;
-      }
-      if (record.recentIllnesses && record.recentIllnesses !== 'N/A' && record.recentIllnesses.trim() !== '') {
-        recentIllness++;
-      }
-    });
-
-    setStats({
-      totalRecords: records.length,
-      uploadedRecords: records.filter(r => r.uploaded).length,
-      pendingRecords: records.filter(r => !r.uploaded).length,
-      representatives,
-      averageBMI: bmiCount > 0 ? (totalBMI / bmiCount).toFixed(1) : 0,
-      underweightCount: underweight,
-      normalWeightCount: normal,
-      overweightCount: overweight,
-      malnutritionCases: malnutrition,
-      recentIllnessCases: recentIllness
-    });
-  }, [records]);
-
-  React.useEffect(() => {
-    calculateStats();
-  }, [records, calculateStats]);
-
   const createDemoData = React.useCallback(async () => {
     try {
       const demoRecords = [
@@ -614,6 +558,62 @@ const AdminPortal = () => {
       console.log('AdminPortal: Loading complete');
     }
   }, [createDemoData]);
+
+  React.useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
+
+  const calculateStats = React.useCallback(() => {
+    if (records.length === 0) return;
+
+    const representatives = new Set(records.map(r => r.representativeId).filter(Boolean));
+    let totalBMI = 0;
+    let bmiCount = 0;
+    let underweight = 0;
+    let normal = 0;
+    let overweight = 0;
+    let malnutrition = 0;
+    let recentIllness = 0;
+
+    records.forEach(record => {
+      // BMI calculations
+      if (record.weight && record.height) {
+        const heightInM = record.height / 100;
+        const bmi = record.weight / (heightInM * heightInM);
+        totalBMI += bmi;
+        bmiCount++;
+
+        if (bmi < 18.5) underweight++;
+        else if (bmi < 25) normal++;
+        else overweight++;
+      }
+
+      // Health conditions
+      if (record.malnutritionSigns && record.malnutritionSigns !== 'N/A' && record.malnutritionSigns.trim() !== '') {
+        malnutrition++;
+      }
+      if (record.recentIllnesses && record.recentIllnesses !== 'N/A' && record.recentIllnesses.trim() !== '') {
+        recentIllness++;
+      }
+    });
+
+    setStats({
+      totalRecords: records.length,
+      uploadedRecords: records.filter(r => r.uploaded).length,
+      pendingRecords: records.filter(r => !r.uploaded).length,
+      representatives,
+      averageBMI: bmiCount > 0 ? (totalBMI / bmiCount).toFixed(1) : 0,
+      underweightCount: underweight,
+      normalWeightCount: normal,
+      overweightCount: overweight,
+      malnutritionCases: malnutrition,
+      recentIllnessCases: recentIllness
+    });
+  }, [records]);
+
+  React.useEffect(() => {
+    calculateStats();
+  }, [records, calculateStats]);
 
   // Utility functions
   const formatDate = (dateString) => {

@@ -34,11 +34,17 @@ const ChildForm = () => {
     // Initialize IndexedDB when component mounts
     childHealthDB.init().catch(console.error);
     
-    // Log page visit
-    activityLogger.logActivity(activityLogger.ACTIONS.PAGE_VISITED, {
-      page: 'Child Form',
-      path: '/add-child'
-    });
+    // Log page visit with safety check
+    try {
+      if (activityLogger && activityLogger.ACTIONS && activityLogger.ACTIONS.PAGE_VISITED) {
+        activityLogger.logActivity(activityLogger.ACTIONS.PAGE_VISITED, {
+          page: 'Child Form',
+          path: '/add-child'
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to log page visit:', error);
+    }
   }, []);
 
   const handleInputChange = (e) => {
@@ -86,11 +92,13 @@ const ChildForm = () => {
         setValidationErrors(prev => ({ ...prev, photo: '' }));
         
         // Log photo capture
-        activityLogger.logActivity(activityLogger.ACTIONS.PHOTO_CAPTURED, {
-          fileSize: file.size,
-          fileType: file.type,
-          fileName: file.name
-        });
+        if (activityLogger && activityLogger.ACTIONS) {
+          activityLogger.logActivity(activityLogger.ACTIONS.PHOTO_CAPTURED, {
+            fileSize: file.size,
+            fileType: file.type,
+            fileName: file.name
+          });
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -141,11 +149,13 @@ const ChildForm = () => {
       setLocationData(location);
       
       // Log location capture
-      activityLogger.logActivity(activityLogger.ACTIONS.LOCATION_CAPTURED, {
-        accuracy: location.accuracy,
-        coordinates: location.coordinateString,
-        method: isAutoCapture ? 'auto' : 'manual'
-      });
+      if (activityLogger && activityLogger.ACTIONS) {
+        activityLogger.logActivity(activityLogger.ACTIONS.LOCATION_CAPTURED, {
+          accuracy: location.accuracy,
+          coordinates: location.coordinateString,
+          method: isAutoCapture ? 'auto' : 'manual'
+        });
+      }
       
       // Only show notification for manual captures, not auto-captures
       if (!isAutoCapture) {
@@ -155,10 +165,12 @@ const ChildForm = () => {
       setLocationError(error.message);
       
       // Log location failure
-      activityLogger.logActivity(activityLogger.ACTIONS.LOCATION_FAILED, {
-        error: error.message,
-        method: isAutoCapture ? 'auto' : 'manual'
-      });
+      if (activityLogger && activityLogger.ACTIONS) {
+        activityLogger.logActivity(activityLogger.ACTIONS.LOCATION_FAILED, {
+          error: error.message,
+          method: isAutoCapture ? 'auto' : 'manual'
+        });
+      }
       
       // Only show notification if we don't already have a location and it's not an auto-capture
       if (!locationData && !isAutoCapture) {
@@ -246,16 +258,18 @@ const ChildForm = () => {
       notificationService.healthIdGenerated(healthId);
       
       // Log successful record creation
-      activityLogger.logActivity(activityLogger.ACTIONS.CHILD_RECORD_CREATED, {
-        healthId,
-        recordId: record.id,
-        childName: record.childName,
-        age: record.age,
-        savedToServer: serverSaveSuccess,
-        hasLocation: !!locationData,
-        hasPhoto: !!record.photo,
-        locationAccuracy: locationData?.accuracy
-      });
+      if (activityLogger && activityLogger.ACTIONS) {
+        activityLogger.logActivity(activityLogger.ACTIONS.CHILD_RECORD_CREATED, {
+          healthId,
+          recordId: record.id,
+          childName: record.childName,
+          age: record.age,
+          savedToServer: serverSaveSuccess,
+          hasLocation: !!locationData,
+          hasPhoto: !!record.photo,
+          locationAccuracy: locationData?.accuracy
+        });
+      }
       
       // Reset form
       setFormData({
