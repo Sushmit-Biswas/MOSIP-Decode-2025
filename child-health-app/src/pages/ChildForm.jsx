@@ -302,10 +302,19 @@ const ChildForm = () => {
       setLocationData(null);
       setLocationError(null);
 
-      // Redirect to records list
+      // Clear any validation errors
+      setValidationErrors({});
+
+      // Redirect to records list with shorter delay
       setTimeout(() => {
-        navigate('/records');
-      }, 1500);
+        try {
+          navigate('/records', { replace: true });
+        } catch (navError) {
+          console.warn('Navigation failed:', navError);
+          // Fallback to window location
+          window.location.href = '/records';
+        }
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Error in handleSubmit:', error);
@@ -327,11 +336,11 @@ const ChildForm = () => {
   const bmi = calculateBMI();
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center space-x-2 mb-6">
-          <User className="h-6 w-6 text-primary-600" />
-          <h1 className="text-2xl font-bold text-gray-900">New Child Health Record</h1>
+    <div className="max-w-2xl mx-auto p-4 sm:p-0">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex items-center space-x-2 mb-4 sm:mb-6">
+          <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary-600" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">New Child Health Record</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
