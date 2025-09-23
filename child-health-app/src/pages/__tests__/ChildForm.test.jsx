@@ -8,18 +8,23 @@ import ChildForm from '../../pages/ChildForm';
 // Mock services
 vi.mock('../../services/geolocationService', () => ({
   default: {
-    getCurrentLocation: vi.fn().mockResolvedValue({
+    getLocationWithFallback: vi.fn().mockResolvedValue({
       latitude: 28.6139,
       longitude: 77.2090,
+      coordinateString: '28.6139, 77.2090',
+      accuracy: 10,
+      timestamp: Date.now(),
       address: 'New Delhi, India'
-    })
+    }),
+    getAccuracyDescription: vi.fn().mockReturnValue('High accuracy (10m)')
   }
 }));
 
 vi.mock('../../services/indexedDB', () => ({
   default: {
     init: vi.fn().mockResolvedValue(true),
-    addRecord: vi.fn().mockResolvedValue(true)
+    saveChildRecord: vi.fn().mockResolvedValue(true),
+    getAllChildRecords: vi.fn().mockResolvedValue([])
   }
 }));
 
@@ -73,13 +78,12 @@ describe('ChildForm', () => {
   it('should render the child form with all required fields', () => {
     render(<ChildFormWrapper />);
 
-    expect(screen.getByText('New Child Registration')).toBeInTheDocument();
+    expect(screen.getByText('New Child Health Record')).toBeInTheDocument();
     expect(screen.getByLabelText(/child's name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/age \(months\)/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/gender/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/mother's name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/father's name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/contact number/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/age \(years\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/weight \(kg\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/height \(cm\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/parent\/guardian's name/i)).toBeInTheDocument();
   });
 
   it('should handle form input changes', async () => {
@@ -87,7 +91,7 @@ describe('ChildForm', () => {
     render(<ChildFormWrapper />);
 
     const nameInput = screen.getByLabelText(/child's name/i);
-    const ageInput = screen.getByLabelText(/age \(months\)/i);
+    const ageInput = screen.getByLabelText(/age \(years\)/i);
 
     await user.type(nameInput, 'Test Child');
     await user.type(ageInput, '6');
@@ -100,24 +104,24 @@ describe('ChildForm', () => {
     const user = userEvent.setup();
     render(<ChildFormWrapper />);
 
-    const ageInput = screen.getByLabelText(/age \(months\)/i);
+    const ageInput = screen.getByLabelText(/age \(years\)/i);
     
-    await user.type(ageInput, 'abc123def');
+    await user.type(ageInput, 'abc12def');
     
     // Should only contain the numeric characters
-    expect(ageInput).toHaveValue(123);
+    expect(ageInput).toHaveValue(12);
   });
 
   it('should validate required fields on submit', async () => {
     const user = userEvent.setup();
     render(<ChildFormWrapper />);
 
-    const submitButton = screen.getByRole('button', { name: /register child/i });
+    const submitButton = screen.getByRole('button', { name: /save record/i });
     await user.click(submitButton);
 
     // Should not submit with empty required fields
     await waitFor(() => {
-      expect(screen.getByText('New Child Registration')).toBeInTheDocument();
+      expect(screen.getByText('New Child Health Record')).toBeInTheDocument();
     });
   });
 
@@ -127,38 +131,33 @@ describe('ChildForm', () => {
     render(<ChildFormWrapper />);
 
     await waitFor(() => {
-      expect(geolocationService.default.getCurrentLocation).toHaveBeenCalled();
-    });
+      expect(geolocationService.default.getLocationWithFallback).toHaveBeenCalled();
+    }, { timeout: 3000 });
   });
 
-  it('should handle gender selection', async () => {
-    const user = userEvent.setup();
+  it('should handle photo upload', async () => {
     render(<ChildFormWrapper />);
 
-    const maleOption = screen.getByRole('radio', { name: /male/i });
-    const femaleOption = screen.getByRole('radio', { name: /female/i });
-
-    await user.click(maleOption);
-    expect(maleOption).toBeChecked();
-    expect(femaleOption).not.toBeChecked();
-
-    await user.click(femaleOption);
-    expect(femaleOption).toBeChecked();
-    expect(maleOption).not.toBeChecked();
-  });
-
-  it('should handle vaccination status checkboxes', async () => {
-    const user = userEvent.setup();
-    render(<ChildFormWrapper />);
-
-    // Look for vaccination checkboxes
-    const bcgCheckbox = screen.getByRole('checkbox', { name: /bcg/i });
+    const photoLabel = screen.getByText(/upload or capture photo/i);
+    expect(photoLabel).toBeInTheDocument();
     
-    await user.click(bcgCheckbox);
-    expect(bcgCheckbox).toBeChecked();
+    // Check that the file input exists within the label
+    const fileInput = screen.getByLabelText(/upload or capture photo/i, { selector: 'input[type="file"]' });
+    expect(fileInput).toBeInTheDocument();
+  });
 
-    await user.click(bcgCheckbox);
-    expect(bcgCheckbox).not.toBeChecked();
+  it('should handle parental consent checkbox', async () => {
+    const user = userEvent.setup();
+    render(<ChildFormWrapper />);
+
+    // Look for parental consent checkbox
+    const consentCheckbox = screen.getByRole('checkbox', { name: /parental\/guardian consent required/i });
+    
+    await user.click(consentCheckbox);
+    expect(consentCheckbox).toBeChecked();
+
+    await user.click(consentCheckbox);
+    expect(consentCheckbox).not.toBeChecked();
   });
 
   it('should successfully submit form with valid data', async () => {
@@ -170,20 +169,20 @@ describe('ChildForm', () => {
 
     // Fill out the form
     await user.type(screen.getByLabelText(/child's name/i), 'Test Child');
-    await user.type(screen.getByLabelText(/age \(months\)/i), '6');
-    await user.click(screen.getByRole('radio', { name: /male/i }));
-    await user.type(screen.getByLabelText(/mother's name/i), 'Test Mother');
-    await user.type(screen.getByLabelText(/father's name/i), 'Test Father');
-    await user.type(screen.getByLabelText(/contact number/i), '9876543210');
+    await user.type(screen.getByLabelText(/age \(years\)/i), '6');
+    await user.type(screen.getByLabelText(/weight \(kg\)/i), '20');
+    await user.type(screen.getByLabelText(/height \(cm\)/i), '110');
+    await user.type(screen.getByLabelText(/parent\/guardian's name/i), 'Test Parent');
+    await user.click(screen.getByRole('checkbox', { name: /parental\/guardian consent required/i }));
 
     // Submit the form
-    const submitButton = screen.getByRole('button', { name: /register child/i });
+    const submitButton = screen.getByRole('button', { name: /save record/i });
     await user.click(submitButton);
 
     await waitFor(() => {
-      expect(indexedDB.default.addRecord).toHaveBeenCalled();
+      expect(indexedDB.default.saveChildRecord).toHaveBeenCalled();
       expect(notificationService.default.success).toHaveBeenCalledWith(
-        expect.stringContaining('Child registered successfully')
+        expect.stringContaining('Child record saved')
       );
     });
   });

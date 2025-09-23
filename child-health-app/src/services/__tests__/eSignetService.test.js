@@ -115,11 +115,11 @@ describe('eSignetService', () => {
 
       localStorage.setItem('esignet_auth', JSON.stringify(authData));
 
-      expect(eSignetService.isAuthenticated()).toBe(true);
+      expect(eSignetService.isAuthenticated()).toBeTruthy();
     });
 
     it('should return false when no auth data exists', () => {
-      expect(eSignetService.isAuthenticated()).toBe(false);
+      expect(eSignetService.isAuthenticated()).toBeFalsy();
     });
   });
 

@@ -347,8 +347,9 @@ const ChildForm = () => {
           {/* Child Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Child's Name *</label>
+              <label htmlFor="childName" className="form-label">Child's Name *</label>
               <input
+                id="childName"
                 type="text"
                 name="childName"
                 value={formData.childName}
@@ -364,9 +365,10 @@ const ChildForm = () => {
               )}
             </div>
             <div>
-              <label className="form-label">Age (years) *</label>
+              <label htmlFor="age" className="form-label">Age (years) *</label>
               <div className="relative">
                 <input
+                  id="age"
                   type="number"
                   name="age"
                   value={formData.age}
@@ -427,9 +429,10 @@ const ChildForm = () => {
                   <Camera className="mx-auto h-12 w-12 text-gray-400" />
                 )}
                 <div className="flex text-sm text-gray-600">
-                  <label className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500">
+                  <label htmlFor="photo" className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500">
                     <span>{formData.photo ? 'Change Photo' : 'Upload or capture photo'}</span>
                     <input
+                      id="photo"
                       type="file"
                       accept="image/*"
                       capture="environment"
@@ -503,10 +506,11 @@ const ChildForm = () => {
           {/* Physical Measurements */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Weight (kg) *</label>
+              <label htmlFor="weight" className="form-label">Weight (kg) *</label>
               <div className="relative">
                 <Scale className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <input
+                  id="weight"
                   type="number"
                   name="weight"
                   value={formData.weight}
@@ -525,10 +529,11 @@ const ChildForm = () => {
               )}
             </div>
             <div>
-              <label className="form-label">Height (cm) *</label>
+              <label htmlFor="height" className="form-label">Height (cm) *</label>
               <div className="relative">
                 <Ruler className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <input
+                  id="height"
                   type="number"
                   name="height"
                   value={formData.height}
@@ -563,8 +568,9 @@ const ChildForm = () => {
 
           {/* Parent Information */}
           <div>
-            <label className="form-label">Parent/Guardian's Name *</label>
+            <label htmlFor="parentName" className="form-label">Parent/Guardian's Name *</label>
             <input
+              id="parentName"
               type="text"
               name="parentName"
               value={formData.parentName}
@@ -582,8 +588,9 @@ const ChildForm = () => {
 
           {/* Health Information */}
           <div>
-            <label className="form-label">Visible Signs of Malnutrition</label>
+            <label htmlFor="malnutritionSigns" className="form-label">Visible Signs of Malnutrition</label>
             <textarea
+              id="malnutritionSigns"
               name="malnutritionSigns"
               value={formData.malnutritionSigns}
               onChange={handleInputChange}
@@ -597,8 +604,9 @@ const ChildForm = () => {
           </div>
 
           <div>
-            <label className="form-label">Recent Illnesses</label>
+            <label htmlFor="recentIllnesses" className="form-label">Recent Illnesses</label>
             <textarea
+              id="recentIllnesses"
               name="recentIllnesses"
               value={formData.recentIllnesses}
               onChange={handleInputChange}
@@ -615,6 +623,7 @@ const ChildForm = () => {
           <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
             <div className="flex items-start">
               <input
+                id="parentalConsent"
                 type="checkbox"
                 name="parentalConsent"
                 checked={formData.parentalConsent}
@@ -622,7 +631,7 @@ const ChildForm = () => {
                 className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-1"
               />
               <div className="ml-3">
-                <label className="block text-sm text-gray-900 font-medium">
+                <label htmlFor="parentalConsent" className="block text-sm text-gray-900 font-medium">
                   Parental/Guardian Consent Required *
                 </label>
                 <p className="text-sm text-gray-600 mt-1">

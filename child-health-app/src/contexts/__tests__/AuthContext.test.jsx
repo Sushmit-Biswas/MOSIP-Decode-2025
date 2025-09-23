@@ -29,11 +29,11 @@ vi.mock('../../services/notificationService', () => ({
 
 // Test component to use the AuthContext
 const TestComponent = () => {
-  const { user, isAuthenticated, login, logout, loading } = useAuth();
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth();
   
   return (
     <div>
-      <div data-testid="loading">{loading ? 'loading' : 'not-loading'}</div>
+      <div data-testid="loading">{isLoading ? 'loading' : 'not-loading'}</div>
       <div data-testid="authenticated">{isAuthenticated ? 'authenticated' : 'not-authenticated'}</div>
       <div data-testid="user">{user ? user.name : 'no-user'}</div>
       <button onClick={() => login({ name: 'Test User', role: 'field_representative' }, 'test-token', 3600)}>
@@ -120,12 +120,16 @@ describe('AuthContext', () => {
     await user.click(loginButton);
 
     await waitFor(() => {
-      const storedData = localStorage.getItem('auth');
-      expect(storedData).toBeTruthy();
+      const storedToken = localStorage.getItem('auth_token');
+      const storedUser = localStorage.getItem('user_info');
+      const storedExpires = localStorage.getItem('auth_expires');
       
-      const parsedData = JSON.parse(storedData);
-      expect(parsedData.user.name).toBe('Test User');
-      expect(parsedData.token).toBe('test-token');
+      expect(storedToken).toBe('test-token');
+      expect(storedUser).toBeTruthy();
+      expect(storedExpires).toBeTruthy();
+      
+      const parsedUser = JSON.parse(storedUser);
+      expect(parsedUser.name).toBe('Test User');
     });
   });
 
@@ -143,7 +147,7 @@ describe('AuthContext', () => {
     await user.click(loginButton);
 
     await waitFor(() => {
-      expect(localStorage.getItem('auth')).toBeTruthy();
+      expect(localStorage.getItem('auth_token')).toBeTruthy();
     });
 
     // Then logout
@@ -151,7 +155,9 @@ describe('AuthContext', () => {
     await user.click(logoutButton);
 
     await waitFor(() => {
-      expect(localStorage.getItem('auth')).toBeNull();
+      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('user_info')).toBeNull();
+      expect(localStorage.getItem('auth_expires')).toBeNull();
     });
   });
 });
