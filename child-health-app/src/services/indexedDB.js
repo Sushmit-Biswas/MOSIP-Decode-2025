@@ -68,8 +68,12 @@ class ChildHealthDB {
 
   // Child Records Operations
   async saveChildRecord(record) {
-    const db = await this.ensureDB();
+    console.log('🔵 Starting saveChildRecord:', record);
+    
     try {
+      const db = await this.ensureDB();
+      console.log('🔵 Database ready');
+      
       const recordWithDefaults = {
         ...record,
         id: record.id || Date.now(),
@@ -78,11 +82,18 @@ class ChildHealthDB {
         syncStatus: 'pending'
       };
 
+      console.log('🔵 Record with defaults:', recordWithDefaults);
+
       const result = await db.put(STORES.CHILD_RECORDS, recordWithDefaults);
       console.log('💾 Child record saved to IndexedDB:', result);
       
       // Add to sync queue
-      await this.addToSyncQueue(recordWithDefaults.id, 'create');
+      try {
+        await this.addToSyncQueue(recordWithDefaults.id, 'create');
+        console.log('🔵 Added to sync queue');
+      } catch (syncError) {
+        console.warn('⚠️ Failed to add to sync queue (non-critical):', syncError);
+      }
       
       return result;
     } catch (error) {

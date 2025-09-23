@@ -46,14 +46,21 @@ class NotificationService {
 
   // Helper to manage notification limits
   manageNotificationLimit() {
-    const activeToasts = toast._state.toasts.filter(t => t.visible);
-    
-    // If we're at or above the limit, dismiss the oldest toast(s)
-    while (activeToasts.length >= this.maxNotifications) {
-      const oldestToast = activeToasts.shift();
-      if (oldestToast) {
-        toast.dismiss(oldestToast.id);
+    try {
+      // Safely check for toast state
+      if (toast && toast._state && toast._state.toasts) {
+        const activeToasts = toast._state.toasts.filter(t => t.visible);
+        
+        // If we're at or above the limit, dismiss the oldest toast(s)
+        while (activeToasts.length >= this.maxNotifications) {
+          const oldestToast = activeToasts.shift();
+          if (oldestToast) {
+            toast.dismiss(oldestToast.id);
+          }
+        }
       }
+    } catch (error) {
+      console.warn('Failed to manage notification limit:', error);
     }
   }
 
@@ -169,10 +176,14 @@ class NotificationService {
   }
 
   dismiss(toastId) {
-    if (toastId) {
-      toast.dismiss(toastId);
-    } else {
-      toast.dismiss();
+    try {
+      if (toastId) {
+        toast.dismiss(toastId);
+      } else {
+        toast.dismiss();
+      }
+    } catch (error) {
+      console.warn('Failed to dismiss toast:', error);
     }
   }
 

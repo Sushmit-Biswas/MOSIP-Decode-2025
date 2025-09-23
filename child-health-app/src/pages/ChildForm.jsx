@@ -1,7 +1,6 @@
 import React from 'react';
 import { Camera, Save, User, Calendar, Scale, Ruler, AlertCircle, MapPin, CheckCircle, Plus, Minus } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
-import apiService from '../services/apiService';
 import geolocationService from '../services/geolocationService';
 import notificationService from '../services/notificationService';
 import activityLogger from '../services/activityLogger';
@@ -205,16 +204,17 @@ const ChildForm = () => {
     e.preventDefault();
     
     if (!validateForm()) {
-      notificationService.error('Please fill in all required fields');
+      try {
+        notificationService.error('Please fill in all required fields');
+      } catch {
+        alert('Please fill in all required fields');
+      }
       return;
     }
 
     setIsSubmitting(true);
-    let loadingToast = null;
     
     try {
-      loadingToast = notificationService.loading('Saving child record...');
-      
       const healthId = `CHR${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`;
       
       const record = {
@@ -227,44 +227,22 @@ const ChildForm = () => {
         uploaded: false
       };
 
-      // Try to save to server if online
-      const isOnline = navigator.onLine;
-      let serverSaveSuccess = false;
-
-      if (isOnline) {
-        try {
-          const response = await apiService.createChild(record);
-          if (response && response.success) {
-            record.uploaded = true;
-            record.serverId = response.data?._id;
-            serverSaveSuccess = true;
-            console.log('✅ Record saved to server');
-          }
-        } catch (serverError) {
-          console.log('❌ Server save failed, will save locally:', serverError.message);
-        }
-      }
+      console.log('Saving record:', record);
 
       // Always save to IndexedDB for offline access
       try {
         await childHealthDB.saveChildRecord(record);
-        console.log('✅ Record saved to IndexedDB');
+        console.log('✅ Record saved to IndexedDB successfully');
       } catch (dbError) {
         console.error('❌ Failed to save to IndexedDB:', dbError);
         throw new Error('Failed to save record locally');
       }
 
-      // Dismiss loading toast
-      if (loadingToast) {
-        notificationService.dismiss(loadingToast);
-        loadingToast = null;
-      }
-
-      // Show success message with Health ID
-      if (serverSaveSuccess) {
+      // Show success message
+      try {
         notificationService.success(`Child record saved! Health ID: ${healthId}`);
-      } else {
-        notificationService.info(`Record saved locally. Health ID: ${healthId}`);
+      } catch {
+        alert(`Child record saved! Health ID: ${healthId}`);
       }
       
       // Log successful record creation
@@ -275,7 +253,6 @@ const ChildForm = () => {
             recordId: record.id,
             childName: record.childName,
             age: record.age,
-            savedToServer: serverSaveSuccess,
             hasLocation: !!locationData,
             hasPhoto: !!record.photo,
             locationAccuracy: locationData?.accuracy
@@ -304,15 +281,15 @@ const ChildForm = () => {
       // Redirect to records list
       setTimeout(() => {
         navigate('/records');
-      }, 2000);
+      }, 1500);
 
     } catch (error) {
-      // Ensure loading toast is dismissed
-      if (loadingToast) {
-        notificationService.dismiss(loadingToast);
-      }
       console.error('Error saving record:', error);
-      notificationService.error(`Error saving record: ${error.message || 'Please try again.'}`);
+      try {
+        notificationService.error(`Error saving record: ${error.message || 'Please try again.'}`);
+      } catch {
+        alert(`Error saving record: ${error.message || 'Please try again.'}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
