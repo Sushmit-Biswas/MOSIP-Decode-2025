@@ -3,9 +3,10 @@ import { Upload, Wifi, WifiOff, CheckCircle, AlertCircle, Key } from 'lucide-rea
 import childHealthDB from '../services/indexedDB';
 import syncService from '../services/syncService';
 import activityLogger from '../services/activityLogger';
+import useOnlineStatus from '../hooks/useOnlineStatus';
 
 const Sync = () => {
-  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+  const isOnline = useOnlineStatus();
   const [pendingRecords, setPendingRecords] = React.useState([]);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [authData, setAuthData] = React.useState({ nationalId: '', otp: '' });
@@ -13,18 +14,7 @@ const Sync = () => {
   const [uploadStatus, setUploadStatus] = React.useState(null);
 
   React.useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
     loadPendingRecords();
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
   }, []);
 
   const loadPendingRecords = async () => {
@@ -157,14 +147,6 @@ const Sync = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Data Synchronization</h1>
-        <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
-          isOnline 
-            ? 'bg-green-100 text-green-800' 
-            : 'bg-red-100 text-red-800'
-        }`}>
-          {isOnline ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-          <span>{isOnline ? 'Online' : 'Offline'}</span>
-        </div>
       </div>
 
       {/* Status Message */}

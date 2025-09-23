@@ -2,25 +2,12 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, Plus, List, Upload, Wifi, WifiOff, Settings, BarChart3, LogOut, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import SehatSaathiLogo from '../images/logo_without_bg.png';
+import useOnlineStatus from '../hooks/useOnlineStatus';
 
 const Navigation = () => {
   const location = useLocation();
   const { isAuthenticated, user, logout } = useAuth();
-  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
-
-  React.useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const isOnline = useOnlineStatus();
 
   // Hide navigation on login pages and landing page
   const hideNavigation = [
@@ -68,7 +55,7 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-3">
-              <img src={SehatSaathiLogo} alt="Sehat Saathi" className="h-10 w-10" />
+              <img src="/icons/logo.svg" alt="Sehat Saathi" className="h-10 w-10" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-gray-900">Sehat Saathi</span>
                 <span className="text-xs text-gray-600">Child Health Records</span>
