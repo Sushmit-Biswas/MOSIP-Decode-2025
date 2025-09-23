@@ -3,7 +3,7 @@ import { Upload, Wifi, WifiOff, CheckCircle, AlertCircle, Key } from 'lucide-rea
 import childHealthDB from '../services/indexedDB';
 import syncService from '../services/syncService';
 import activityLogger from '../services/activityLogger';
-import useOnlineStatus from '../hooks/useOnlineStatus';
+import useOnlineStatus from '../hooks/useOnlineStatus.jsx';
 
 const Sync = () => {
   const isOnline = useOnlineStatus();
