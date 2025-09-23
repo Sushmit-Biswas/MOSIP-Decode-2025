@@ -264,7 +264,7 @@ class PDFService {
   }
 
   /**
-   * Add watermark
+   * Add watermark - simplified version
    */
   addWatermark(pdf, pageWidth, pageHeight) {
     const pageCount = pdf.internal.getNumberOfPages();
@@ -272,20 +272,25 @@ class PDFService {
     for (let i = 1; i <= pageCount; i++) {
       pdf.setPage(i);
       
-      // Set transparent text
-      pdf.setGState(pdf.GState({ opacity: 0.1 }));
-      pdf.setFontSize(50);
-      pdf.setTextColor(128, 128, 128);
-      
-      // Add diagonal watermark
-      pdf.saveGraphicsState();
-      pdf.setTransformMatrix(1, 0, 0, 1, pageWidth / 2, pageHeight / 2);
-      pdf.rotate(45 * Math.PI / 180);
-      pdf.text('CHILD HEALTH RECORD', 0, 0, { align: 'center' });
-      pdf.restoreGraphicsState();
-      
-      // Reset opacity
-      pdf.setGState(pdf.GState({ opacity: 1 }));
+      try {
+        // Simple watermark without transparency
+        pdf.setFontSize(30);
+        pdf.setTextColor(200, 200, 200);
+        
+        // Add text in center without rotation
+        const text = 'CHILD HEALTH RECORD';
+        const textWidth = pdf.getTextWidth(text);
+        pdf.text(text, (pageWidth - textWidth) / 2, pageHeight / 2, { 
+          align: 'center',
+          angle: 45 
+        });
+        
+        // Reset color
+        pdf.setTextColor(0, 0, 0);
+      } catch (error) {
+        console.warn('Could not add watermark:', error);
+        // Continue without watermark if it fails
+      }
     }
   }
 

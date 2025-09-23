@@ -76,26 +76,26 @@ const RecordDetailsModal = ({ record, isOpen, onClose }) => {
   const bmiCategory = getBMICategory(bmi);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8 mx-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-2 sm:my-8 mx-auto max-h-[98vh] sm:max-h-[90vh]">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 text-white rounded-t-xl">
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-4 sm:px-6 py-3 sm:py-4 text-white rounded-t-xl">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">Child Health Record Details</h2>
-              <p className="text-primary-100 text-sm">Complete health information</p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold truncate">Child Health Record Details</h2>
+              <p className="text-primary-100 text-xs sm:text-sm">Complete health information</p>
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-white hover:bg-opacity-20"
+              className="text-white hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-white hover:bg-opacity-20 flex-shrink-0 ml-2"
             >
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[75vh] overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-[75vh] overflow-y-auto">
           {/* Health ID Card */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between">
@@ -113,11 +113,11 @@ const RecordDetailsModal = ({ record, isOpen, onClose }) => {
           </div>
 
           {/* Main Grid */}
-          <div className="grid lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Left Column */}
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Child Information */}
-              <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <User className="h-5 w-5 mr-2 text-primary-600" />
                   Child Information
