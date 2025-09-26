@@ -5,21 +5,38 @@ const morgan = require('morgan');
 const connectDB = require('./config/database');
 require('dotenv').config();
 
-// Connect to MongoDB
+// Connect to MongoDB (module-level so serverless instances reuse connection when possible)
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Configure CORS to allow local dev and the Vercel frontend domain
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'https://mosip-decode-2025.vercel.app'
+].filter(Boolean);
+
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    return callback(new Error('CORS policy: This origin is not allowed'));
+  },
   credentials: true
 }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Trust reverse proxy (needed for secure cookies and correct client IPs when behind platforms like Vercel)
+app.set('trust proxy', 1);
+
+console.log('📥 Allowed CORS origins:', allowedOrigins);
 
 // Routes
 app.get('/', (req, res) => {
@@ -60,14 +77,5 @@ app.use((req, res) => {
     path: req.originalUrl
   });
 });
-
-// Only start the server if this file is run directly (node server.js)
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 CORS origin(s): ${process.env.CLIENT_URL || 'http://localhost:5173'}${process.env.CLIENT_URL ? `, https://mosip-decode-2025.vercel.app` : ', https://mosip-decode-2025.vercel.app'} `);
-  });
-}
 
 module.exports = app;
