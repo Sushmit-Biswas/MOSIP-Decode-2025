@@ -27,48 +27,41 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
-    // Use mock backend in development mode for failed requests
-    if (this.isDev) {
-      try {
-        const url = `${this.baseURL}${endpoint}`;
-        const config = {
-          headers: this.getHeaders(),
-          ...options
-        };
+    const url = `${this.baseURL}${endpoint}`;
+    const config = {
+      headers: this.getHeaders(),
+      ...options
+    };
 
-        const response = await fetch(url, config);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          throw new Error(errorData?.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        return await response.json();
-      } catch (error) {
-        console.warn(`🔧 API request failed, using mock backend: ${endpoint}`, error.message);
-        return await mockBackendService.request(endpoint, options);
+    try {
+      console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+        console.error(`❌ API Error: ${errorMessage}`);
+        throw new Error(errorMessage);
       }
-    } else {
-      // Production mode - original behavior
-      const url = `${this.baseURL}${endpoint}`;
-      const config = {
-        headers: this.getHeaders(),
-        ...options
-      };
 
-      try {
-        const response = await fetch(url, config);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          throw new Error(errorData?.message || `HTTP ${response.status}: ${response.statusText}`);
+      const data = await response.json();
+      console.log(`✅ API Success: ${endpoint}`);
+      return data;
+    } catch (error) {
+      console.error(`💥 API Request failed: ${endpoint}`, error);
+      
+      // Only use mock backend in development mode as fallback
+      if (this.isDev && mockBackendService) {
+        console.warn(`🔧 Using mock backend for: ${endpoint}`);
+        try {
+          return await mockBackendService.request(endpoint, options);
+        } catch (mockError) {
+          console.error('Mock backend also failed:', mockError);
+          throw error; // Throw original error
         }
-
-        return await response.json();
-      } catch (error) {
-        console.error(`API Request failed: ${endpoint}`, error);
-        throw error;
       }
+      
+      throw error;
     }
   }
 
@@ -105,81 +98,32 @@ class ApiService {
 
   // Authentication methods
   async authenticateWithESignet(nationalId, otp) {
-    if (this.isDev) {
-      try {
-        return await this.request('/auth/esignet', {
-          method: 'POST',
-          body: JSON.stringify({ nationalId, otp })
-        });
-      } catch (error) {
-        console.warn('🔧 Using mock authentication due to backend error:', error.message);
-        return await mockBackendService.authenticateWithESignet(nationalId, otp);
-      }
-    } else {
-      return this.request('/auth/esignet', {
-        method: 'POST',
-        body: JSON.stringify({ nationalId, otp })
-      });
-    }
+    return this.request('/auth/esignet', {
+      method: 'POST',
+      body: JSON.stringify({ nationalId, otp })
+    });
   }
 
   async sendOTP(nationalId) {
-    if (this.isDev) {
-      try {
-        return await this.request('/auth/send-otp', {
-          method: 'POST',
-          body: JSON.stringify({ nationalId })
-        });
-      } catch (error) {
-        console.warn('🔧 Using mock OTP service due to backend error:', error.message);
-        return await mockBackendService.sendOTP(nationalId);
-      }
-    } else {
-      return this.request('/auth/send-otp', {
-        method: 'POST',
-        body: JSON.stringify({ nationalId })
-      });
-    }
+    return this.request('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ nationalId })
+    });
   }
 
   async uploadRecords(records, authToken) {
-    if (this.isDev) {
-      try {
-        return await this.request('/children/upload', {
-          method: 'POST',
-          body: JSON.stringify({ records }),
-          headers: {
-            ...this.getHeaders(),
-            'Authorization': `Bearer ${authToken}`
-          }
-        });
-      } catch (error) {
-        console.warn('🔧 Using mock upload service due to backend error:', error.message);
-        return await mockBackendService.uploadRecords(records, authToken);
+    return this.request('/children/upload', {
+      method: 'POST',
+      body: JSON.stringify({ records }),
+      headers: {
+        ...this.getHeaders(),
+        'Authorization': `Bearer ${authToken}`
       }
-    } else {
-      return this.request('/children/upload', {
-        method: 'POST',
-        body: JSON.stringify({ records }),
-        headers: {
-          ...this.getHeaders(),
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-    }
+    });
   }
 
   async checkHealth() {
-    if (this.isDev) {
-      try {
-        return await this.request('/health');
-      } catch (error) {
-        console.warn('🔧 Using mock health check due to backend error:', error.message);
-        return await mockBackendService.checkHealth();
-      }
-    } else {
-      return this.request('/health');
-    }
+    return this.request('/health');
   }
 
   // Sync methods
