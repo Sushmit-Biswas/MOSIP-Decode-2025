@@ -61,13 +61,8 @@ app.use((req, res) => {
   });
 });
 
-// Only start the server if this file is run directly (node server.js)
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 CORS origin(s): ${process.env.CLIENT_URL || 'http://localhost:5173'}${process.env.CLIENT_URL ? `, https://mosip-decode-2025.vercel.app` : ', https://mosip-decode-2025.vercel.app'} `);
-  });
-}
-
-module.exports = app;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 CORS origin: ${process.env.CLIENT_URL || 'http://localhost:5173'}`);
+});

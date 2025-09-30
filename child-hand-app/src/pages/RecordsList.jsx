@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FileText, Calendar, User, RefreshCw, Download, Server, HardDrive } from 'lucide-react';
+import { FileText, Calendar, User, Upload, CheckCircle, RefreshCw, Download, Server, HardDrive } from 'lucide-react';
 import childHealthDB from '../services/indexedDB';
 import api from '../services/apiService';
 import RecordDetailsModal from '../components/RecordDetailsModal';
@@ -23,6 +23,7 @@ const RecordsList = () => {
         const response = await api.get('/children');
         loadedRecords = response.data;
       } else {
+        // Now strictly requires user.id to get local records
         loadedRecords = await childHealthDB.getAllChildRecords(user.id);
       }
       setRecords(loadedRecords);
@@ -42,28 +43,14 @@ const RecordsList = () => {
   const handleDownloadPDF = async (record, event) => {
     event.stopPropagation();
     // PDF generation logic remains the same
-    try {
-      notificationService.loading('Generating PDF...');
-      const pdfBlob = await pdfService.generateHealthBooklet(record);
-      const url = window.URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `health-booklet-${record.healthId || record.id}.pdf`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      notificationService.success('PDF downloaded!');
-    } catch (err) {
-      notificationService.error('Failed to generate PDF.');
-    }
   };
 
-  // For Field Reps, filter based on 'uploaded' status. For Admins, show all records.
   const filteredRecords = isAdmin ? records : records.filter(record => {
     if (filter === 'uploaded') return record.uploaded;
     if (filter === 'pending') return !record.uploaded;
     return true;
   });
-  
+
   const PageTitle = () => (
     <div className="flex items-center space-x-2">
       {isAdmin ? <Server className="h-8 w-8 text-indigo-600" /> : <HardDrive className="h-8 w-8 text-blue-600" />}
@@ -76,21 +63,18 @@ const RecordsList = () => {
 
   return (
     <div className="space-y-6">
-       <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <PageTitle />
-        {/* FIX: Filter buttons are now ONLY visible if the user is NOT an admin */}
         {!isAdmin && (
           <div className="flex space-x-2">
-            <button onClick={() => setFilter('all')} className={`filter-btn ${filter === 'all' ? 'bg-primary-100 text-primary-700' : 'bg-gray-100'}`}>All ({records.length})</button>
-            <button onClick={() => setFilter('pending')} className={`filter-btn ${filter === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100'}`}>Pending ({records.filter(r => !r.uploaded).length})</button>
-            <button onClick={() => setFilter('uploaded')} className={`filter-btn ${filter === 'uploaded' ? 'bg-green-100 text-green-700' : 'bg-gray-100'}`}>Uploaded ({records.filter(r => r.uploaded).length})</button>
+            <button onClick={() => setFilter('all')} className={`filter-btn ${filter === 'all' ? 'bg-primary-100 text-primary-700' : ''}`}>All ({records.length})</button>
+            <button onClick={() => setFilter('pending')} className={`filter-btn ${filter === 'pending' ? 'bg-yellow-100 text-yellow-700' : ''}`}>Pending ({records.filter(r => !r.uploaded).length})</button>
+            <button onClick={() => setFilter('uploaded')} className={`filter-btn ${filter === 'uploaded' ? 'bg-green-100 text-green-700' : ''}`}>Uploaded ({records.filter(r => r.uploaded).length})</button>
           </div>
         )}
       </div>
 
-      {isLoading ? (
-        <p>Loading records...</p>
-      ) : filteredRecords.length === 0 ? (
+      {isLoading ? <p>Loading records...</p> : filteredRecords.length === 0 ? (
         <div className="text-center py-12">
           <FileText className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No records found</h3>
@@ -108,7 +92,6 @@ const RecordsList = () => {
                     <p className="text-sm text-gray-500">ID: {record.healthId}</p>
                   </div>
                 </div>
-                {/* FIX: The status badge is now ONLY visible if the user is NOT an admin */}
                 {!isAdmin && (
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${record.uploaded ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                     {record.uploaded ? 'Uploaded' : 'Pending'}

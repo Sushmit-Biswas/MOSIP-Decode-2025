@@ -1,19 +1,80 @@
-# Child Health Record Booklet - Complete Setup Guide
+# Sehat Saathi - Setup Guide
+
+## 🛠️ Prerequisites & Installation
+
+### Required Software
+1. **Node.js 18+** - Download from [nodejs.org](https://nodejs.org/)
+2. **Git** - Download from [git-scm.com](https://git-scm.com/)
+3. **Code Editor** - VS Code recommended
+
+### Verify Installation
+```bash
+node --version    # Should show v18+ or v20+
+npm --version     # Should show 8+
+git --version     # Should show 2+
+```
+
+## 🚀 How to Run the Code
+
+### Step 1: Download/Clone Project
+```bash
+# If you have the zip file, extract it
+# Navigate to the correct project folder (use quotes for folder names with spaces)
+cd "sehat-saathi-main\MOSIP Decode-2025"
+```
+
+### Step 2: Install Dependencies & Start Backend
+```bash
+# Navigate to backend folder (from MOSIP Decode-2025 directory)
+cd child-health-backend
+
+# Install all required packages
+npm install
+
+# Create environment file (optional)
+echo "JWT_SECRET=your-secret-key" > .env
+echo "MONGODB_URI=mongodb://localhost:27017/child-health" >> .env
+echo "PORT=5000" >> .env
+
+# Start the backend server
+npm start
+```
+**✅ Backend should now be running on http://localhost:5000**
+
+### Step 3: Install Dependencies & Start Frontend
+```bash
+# Open new terminal/command prompt
+# Navigate to the correct project folder first, then frontend folder
+cd "sehat-saathi-main\MOSIP Decode-2025"
+cd child-health-app
+
+# Install all required packages
+npm install
+
+# Start the development server
+npm run dev
+```
+**✅ Frontend should now be running on http://localhost:5173**
+
+### Step 4: Access the Application
+- Open your browser and go to: **http://localhost:5173**
+- The application should load successfully
+- Both servers must be running for full functionality
+
+---
 
 ## 🎯 Overview
-A complete PWA application for offline child health data collection with secure upload via eSignet authentication. **All features are now implemented and ready for use!**
+Offline-first PWA for child health data collection with MOSIP eSignet authentication.
 
-## ✅ Current Status - COMPLETE
-- ✅ React Frontend (Vite + Tailwind CSS + PWA)
-- ✅ Node.js Backend (Express + MongoDB + JWT)
-- ✅ Complete PWA with Service Worker
-- ✅ Real PDF Generation with PDFKit
-- ✅ Enhanced eSignet Integration (MOSIP patterns)
+## ✅ Current Status
+- ✅ React 19.1.1 Frontend (Vite + Tailwind CSS + PWA)
+- ✅ Node.js Backend (Express 5.1.0 + MongoDB + JWT)
+- ✅ PWA with Service Worker and IndexedDB
+- ✅ MOSIP eSignet Integration (development-ready)
 - ✅ Admin Portal & Analytics Dashboard
 - ✅ Mobile-Optimized Design
-- ✅ Full Database Integration
 
-## 🚀 Quick Start (2 Steps)
+## 🚀 Quick Start (Summary)
 
 ### Prerequisites
 - Node.js 18+ (current: 20.18.0 works fine)
@@ -57,9 +118,12 @@ npm run dev
 - BMI calculations and health indicators
 
 ### 4. **Data Sync** (/sync)
-- **Authenticate with eSignet:**
-  - National ID: any ID (e.g., "123456789")
-  - OTP: **123456** (test OTP)
+- **Field Rep Login:**
+  - National ID: any ID (e.g., "123456789")  
+  - Password: "password123"
+- **Admin Login:**
+  - National ID: "ADMIN001", "ADMIN123", or "admin"
+  - Password: "admin123"
 - Upload offline records to server
 - Real-time sync status
 
@@ -92,38 +156,35 @@ npm run dev
 
 ## 🔧 API Testing
 
-### Test eSignet Authentication
+### Test Authentication (Field Rep)
 ```bash
-# Send OTP
-curl -X POST http://localhost:5000/api/auth/send-otp \
+curl -X POST http://localhost:5000/api/auth/login/representative \
   -H "Content-Type: application/json" \
-  -d '{"nationalId": "123456789"}'
+  -d '{"nationalId": "123456789", "password": "password123"}'
+```
 
-# Authenticate (use OTP: 123456)
-curl -X POST http://localhost:5000/api/auth/esignet \
+### Test Authentication (Admin)
+```bash
+curl -X POST http://localhost:5000/api/auth/login/admin \
   -H "Content-Type: application/json" \
-  -d '{"nationalId": "123456789", "otp": "123456"}'
+  -d '{"nationalId": "ADMIN001", "password": "admin123"}'
 ```
 
 ### Test Child Records API
 ```bash
-# Get all records
-curl http://localhost:5000/api/children
-
-# Create new record
-curl -X POST http://localhost:5000/api/children \
+# Batch upload records (requires field rep token)
+curl -X POST http://localhost:5000/api/children/batch \
   -H "Content-Type: application/json" \
-  -d '{
-    "childName": "Test Child",
-    "age": 5,
-    "weight": 18.5,
-    "height": 110,
-    "parentName": "Test Parent",
-    "parentalConsent": true
-  }'
+  -H "Authorization: Bearer <token>" \
+  -d '{"records": [{"name": "Test Child", "age": 5}]}'
 
-# Download PDF booklet (replace with actual healthId)
-curl http://localhost:5000/api/children/CHR123456789/booklet
+# Get all records (requires admin token)
+curl -H "Authorization: Bearer <admin_token>" \
+  http://localhost:5000/api/children
+
+# Get stats (requires admin token)
+curl -H "Authorization: Bearer <admin_token>" \
+  http://localhost:5000/api/children/stats
 ```
 
 ## 🚀 Production Deployment

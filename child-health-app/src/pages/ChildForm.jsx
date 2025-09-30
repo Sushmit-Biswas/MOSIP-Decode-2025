@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const ChildForm = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuth(); // Get user from AuthContext
   const hasInitializedLocation = React.useRef(false);
   
   const [formData, setFormData] = React.useState({
@@ -21,6 +21,7 @@ const ChildForm = () => {
     parentName: '',
     malnutritionSigns: '',
     recentIllnesses: '',
+    childId: '',
     parentalConsent: false,
     photo: null,
   });
@@ -216,36 +217,37 @@ const ChildForm = () => {
       // Calculate BMI for the record
       const bmi = calculateBMI();
       
-      // Check for duplicate records
+      // Check for duplicate records (offline check)
       try {
         const existingRecords = await childHealthDB.getAllChildRecords();
         const isDuplicate = existingRecords.some(record => 
           record.childName.toLowerCase().trim() === formData.childName.toLowerCase().trim() &&
           record.age === formData.age &&
-          record.parentName.toLowerCase().trim() === formData.parentName.toLowerCase().trim()
+          record.parentName.toLowerCase().trim() === formData.parentName.toLowerCase().trim() &&
+          record.representativeId === (user?.id || 'unknown') // Check for duplicates only for current representative
         );
         
         if (isDuplicate) {
-          notificationService.warning('A record with similar details already exists. Please verify the information.');
+          notificationService.warning('A record with similar details already exists for your account. Please verify the information.');
           setIsSubmitting(false);
           return;
         }
       } catch (duplicateCheckError) {
-        console.warn('Could not check for duplicates:', duplicateCheckError);
+        console.warn('Could not check for duplicates in IndexedDB:', duplicateCheckError);
       }
       
       const record = {
         ...formData,
         healthId,
         bmi: bmi || null,
-        id: Date.now(),
+        id: Date.now(), // Local unique ID for IndexedDB
         timestamp: new Date().toISOString(),
-        representativeId: user?.nationalId || 'unknown',
+        representativeId: user?.id || 'unknown', // Use user.id (MongoDB _id) from AuthContext
         location: locationData,
         uploaded: false
       };
 
-      console.log('Saving record:', record);
+      console.log('Saving record to IndexedDB:', record);
 
       // Always save to IndexedDB for offline access
       try {
@@ -279,7 +281,8 @@ const ChildForm = () => {
             age: record.age,
             hasLocation: !!locationData,
             hasPhoto: !!record.photo,
-            locationAccuracy: locationData?.accuracy
+            locationAccuracy: locationData?.accuracy,
+            representativeId: user?.id
           });
         }
       } catch (logError) {
@@ -295,6 +298,7 @@ const ChildForm = () => {
         parentName: '',
         malnutritionSigns: '',
         recentIllnesses: '',
+        childId: '',
         parentalConsent: false,
         photo: null,
       });
@@ -617,6 +621,19 @@ const ChildForm = () => {
             <p className="text-xs text-gray-500 mt-1">
               Include: fever, diarrhea, respiratory issues, infections in the last 30 days
             </p>
+          </div>
+
+          <div>
+            <label htmlFor="childId" className="form-label">ID</label>
+            <textarea
+              id="childId"
+              name="childId"
+              value={formData.childId}
+              onChange={handleInputChange}
+              className="form-input"
+              rows={3}
+              placeholder="List ID or enter 'N/A' if none reported"
+            />
           </div>
 
           {/* Consent */}

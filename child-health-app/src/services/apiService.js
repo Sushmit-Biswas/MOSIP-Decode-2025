@@ -1,138 +1,70 @@
-// API service for backend communication
-import mockBackendService from './mockBackendService';
+import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-class ApiService {
-  constructor() {
-    this.baseURL = API_BASE_URL;
-    this.authToken = null;
-    this.isDev = import.meta.env.DEV;
-  }
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-  setAuthToken(token) {
-    this.authToken = token;
-  }
-
-  getHeaders() {
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-
-    if (this.authToken) {
-      headers['Authorization'] = `Bearer ${this.authToken}`;
+// Add a request interceptor to include the auth token
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token'); // Get token from localStorage
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
-    return headers;
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
+);
 
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const config = {
-      headers: this.getHeaders(),
-      ...options
-    };
+// Optional: Add a response interceptor for error handling, e.g., redirect on 401
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Handle unauthorized errors, e.g., logout the user
+      console.error('Unauthorized access - logging out');
+      localStorage.removeItem('token');
+      // Optionally, redirect to login page
+      // window.location.href = '/login'; 
+    }
+    return Promise.reject(error);
+  }
+);
 
+// Add new API calls here
+export default {
+  // For authentication
+  loginRepresentative: (nationalId, otp) => api.post('/auth/login/representative', { nationalId, otp }),
+  loginAdmin: (nationalId, password) => api.post('/auth/login/admin', { nationalId, password }),
+  getMe: () => api.get('/auth/me'),
+
+  // For child records (admin & representative)
+  getChildRecords: () => api.get('/children'),
+  getChildRecordById: (id) => api.get(`/children/${id}`),
+  // createChildRecord: (record) => api.post('/children', record), // This route is not used directly by client form, but by batch sync if needed.
+
+  // For syncing records from IndexedDB to server (called by syncService)
+  // This method will handle uploading a batch of records.
+  uploadRecordsBatch: async (records) => {
     try {
-      console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
-      const response = await fetch(url, config);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        const errorMessage = errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
-        console.error(`❌ API Error: ${errorMessage}`);
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      console.log(`✅ API Success: ${endpoint}`);
-      return data;
+      const response = await api.post('/children/batch', { records }); // New batch endpoint
+      return { success: true, data: response.data };
     } catch (error) {
-      console.error(`💥 API Request failed: ${endpoint}`, error);
-      
-      // Only use mock backend in development mode as fallback
-      if (this.isDev && mockBackendService) {
-        console.warn(`🔧 Using mock backend for: ${endpoint}`);
-        try {
-          return await mockBackendService.request(endpoint, options);
-        } catch (mockError) {
-          console.error('Mock backend also failed:', mockError);
-          throw error; // Throw original error
-        }
-      }
-      
-      throw error;
+      console.error('API Service: Error uploading records batch', error.response?.data || error.message);
+      return { success: false, error: error.response?.data?.message || error.message };
     }
-  }
+  },
 
-  // Children API methods
-  async getChildren(params = {}) {
-    const queryString = new URLSearchParams(params).toString();
-    const endpoint = `/children${queryString ? `?${queryString}` : ''}`;
-    return this.request(endpoint);
-  }
+  // For admin stats
+  getAdminStats: () => api.get('/children/stats'),
 
-  async createChild(childData) {
-    return this.request('/children', {
-      method: 'POST',
-      body: JSON.stringify(childData)
-    });
-  }
-
-  async getChildByHealthId(healthId) {
-    return this.request(`/children/${healthId}`);
-  }
-
-  async downloadHealthBooklet(healthId, download = true) {
-    const url = `${this.baseURL}/children/${healthId}/booklet?download=${download}`;
-    const response = await fetch(url, {
-      headers: this.getHeaders()
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download booklet: ${response.statusText}`);
-    }
-
-    return response.blob();
-  }
-
-  // Authentication methods
-  async authenticateWithESignet(nationalId, otp) {
-    return this.request('/auth/esignet', {
-      method: 'POST',
-      body: JSON.stringify({ nationalId, otp })
-    });
-  }
-
-  async sendOTP(nationalId) {
-    return this.request('/auth/send-otp', {
-      method: 'POST',
-      body: JSON.stringify({ nationalId })
-    });
-  }
-
-  async uploadRecords(records, authToken) {
-    return this.request('/children/upload', {
-      method: 'POST',
-      body: JSON.stringify({ records }),
-      headers: {
-        ...this.getHeaders(),
-        'Authorization': `Bearer ${authToken}`
-      }
-    });
-  }
-
-  async checkHealth() {
-    return this.request('/health');
-  }
-
-  // Sync methods
-  async getSyncStatus() {
-    return this.request('/sync/status');
-  }
-}
-
-// Create singleton instance
-const apiService = new ApiService();
-
-export default apiService;
+  // Generic request for other needs
+  request: (method, url, data = {}) => api.request({ method, url, data }),
+};

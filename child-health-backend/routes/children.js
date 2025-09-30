@@ -1,305 +1,84 @@
 const express = require('express');
 const router = express.Router();
 const ChildRecord = require('../models/ChildRecord');
-const HealthBookletGenerator = require('../services/pdfGenerator');
+const { protect, authorize } = require('../middleware/authMiddleware');
 
-// GET /api/children - Get all child records
-router.get('/', async (req, res) => {
-  try {
-    const { page = 1, limit = 10, search, uploaded, representativeId } = req.query;
-    
-    // Build query filters
-    const filters = {};
-    if (search) {
-      filters.$or = [
-        { childName: { $regex: search, $options: 'i' } },
-        { parentName: { $regex: search, $options: 'i' } },
-        { healthId: { $regex: search, $options: 'i' } }
-      ];
-    }
-    if (uploaded !== undefined) {
-      filters.uploaded = uploaded === 'true';
-    }
-    if (representativeId) {
-      filters.representativeId = representativeId;
-    }
+// @route   POST /api/children/batch
+// @desc    Upload multiple child records from a client's IndexedDB. This is the primary sync route.
+// @access  Private (Field Representative)
+router.post('/batch', protect, authorize('field_representative'), async (req, res) => {
+  const { records } = req.body;
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ message: 'No records provided for batch upload.' });
+  }
 
-    // Execute query with pagination
-    const options = {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      sort: { createdAt: -1 },
-      lean: true
-    };
+  const results = {
+    successfulUploads: [],
+    failedUploads: []
+  };
 
-    let records;
+  // Use Promise.all to process all records concurrently for better performance
+  await Promise.all(records.map(async (clientRecord) => {
     try {
-      // Try to use MongoDB if connected
-      const totalCount = await ChildRecord.countDocuments(filters);
-      records = await ChildRecord.find(filters)
-        .sort(options.sort)
-        .limit(options.limit)
-        .skip((options.page - 1) * options.limit)
-        .lean();
+      // Find a record by its unique healthId. If it exists, update it. If not, create it.
+      // This makes the sync operation idempotent (safe to retry).
+      const query = { healthId: clientRecord.healthId };
+      const update = {
+        ...clientRecord, // Use all data from the client
+        representativeId: req.user.id, // CRITICAL: Enforce the uploader's ID for security
+        uploaded: true, // Mark as successfully uploaded
+        _id: undefined, // Ensure _id is not overwritten from client
+      };
+      const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
-      res.json({
-        success: true,
-        data: records,
-        pagination: {
-          currentPage: options.page,
-          totalPages: Math.ceil(totalCount / options.limit),
-          totalCount,
-          hasNext: options.page < Math.ceil(totalCount / options.limit),
-          hasPrev: options.page > 1
-        }
-      });
-    } catch (dbError) {
-      // Fallback to mock data if MongoDB is not available
-      console.log('MongoDB not available, using mock data');
+      const savedRecord = await ChildRecord.findOneAndUpdate(query, update, options);
       
-      const mockRecords = [
-        {
-          _id: '1',
-          healthId: 'CHR123456789',
-          childName: 'John Doe',
-          age: 5,
-          weight: 18.5,
-          height: 110,
-          parentName: 'Jane Doe',
-          malnutritionSigns: 'None observed',
-          recentIllnesses: 'Common cold last month',
-          timestamp: new Date().toISOString(),
-          uploaded: true,
-          representativeId: 'rep123'
-        }
-      ];
+      // Send back the original client-side ID so the client can update its local DB
+      results.successfulUploads.push({
+        id: clientRecord.id, // The temporary ID from the client's IndexedDB
+        healthId: savedRecord.healthId,
+        _id: savedRecord._id // The permanent ID from MongoDB
+      });
 
-      res.json({
-        success: true,
-        data: mockRecords,
-        pagination: {
-          currentPage: 1,
-          totalPages: 1,
-          totalCount: mockRecords.length,
-          hasNext: false,
-          hasPrev: false
-        }
+    } catch (error) {
+      // If any record fails, log the detailed error on the server and add it to the failed list.
+      console.error(`Error processing record with healthId ${clientRecord.healthId}:`, error);
+      results.failedUploads.push({
+        id: clientRecord.id, // The client's ID
+        healthId: clientRecord.healthId,
+        error: error.message
       });
     }
+  }));
+
+  // Send a 200 OK status with the results. The client will use this to update its local state.
+  res.status(200).json(results);
+});
+
+// @route   GET /api/children
+// @desc    Get all child records (FOR ADMINS ONLY from MongoDB)
+// @access  Private (Admin)
+router.get('/', protect, authorize('admin'), async (req, res) => {
+  try {
+    const records = await ChildRecord.find({}).sort({ timestamp: -1 });
+    res.json(records);
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch child records',
-      message: error.message
-    });
+    console.error('Error fetching child records for admin:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// POST /api/children - Create new child record
-router.post('/', async (req, res) => {
-  try {
-    const {
-      childName,
-      age,
-      weight,
-      height,
-      parentName,
-      malnutritionSigns,
-      recentIllnesses,
-      photo,
-      parentalConsent,
-      location,
-      representativeId
-    } = req.body;
-
-    // Validation
-    if (!childName || !age || !weight || !height || !parentName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields',
-        message: 'childName, age, weight, height, and parentName are required'
-      });
-    }
-
-    if (!parentalConsent) {
-      return res.status(400).json({
-        success: false,
-        error: 'Parental consent required',
-        message: 'Parental consent must be granted before creating record'
-      });
-    }
-
-    // Generate health ID
-    const healthId = 'CHR' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
-
-    const recordData = {
-      healthId,
-      childName: childName.trim(),
-      age: parseFloat(age),
-      weight: parseFloat(weight),
-      height: parseFloat(height),
-      parentName: parentName.trim(),
-      malnutritionSigns: malnutritionSigns?.trim() || 'N/A',
-      recentIllnesses: recentIllnesses?.trim() || 'N/A',
-      photo,
-      parentalConsent: true,
-      location: location || null,
-      representativeId: representativeId || 'unknown',
-      uploaded: true,
-      syncedAt: new Date()
-    };
-
+// @route   GET /api/children/stats
+// @desc    Get statistics about child records from MongoDB (FOR ADMINS ONLY)
+// @access  Private (Admin)
+router.get('/stats', protect, authorize('admin'), async (req, res) => {
     try {
-      // Try to save to MongoDB
-      const newRecord = new ChildRecord(recordData);
-      const savedRecord = await newRecord.save();
-
-      res.status(201).json({
-        success: true,
-        data: savedRecord,
-        message: 'Child record created successfully'
-      });
-    } catch (dbError) {
-      console.log('MongoDB not available, returning mock response');
-      
-      // Fallback mock response
-      const mockRecord = {
-        _id: Date.now().toString(),
-        ...recordData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      res.status(201).json({
-        success: true,
-        data: mockRecord,
-        message: 'Child record created successfully (mock mode)'
-      });
+        const totalRecords = await ChildRecord.countDocuments();
+        res.json({ totalRecords });
+    } catch (error) {
+        console.error('Error fetching admin stats:', error);
+        res.status(500).json({ message: 'Server error' });
     }
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create child record',
-      message: error.message
-    });
-  }
-});
-
-// GET /api/children/:healthId - Get child record by health ID
-router.get('/:healthId', async (req, res) => {
-  try {
-    const { healthId } = req.params;
-
-    try {
-      // Try MongoDB first
-      const record = await ChildRecord.findOne({ healthId }).lean();
-      
-      if (!record) {
-        return res.status(404).json({
-          success: false,
-          error: 'Child record not found',
-          message: `No record found with Health ID: ${healthId}`
-        });
-      }
-
-      res.json({
-        success: true,
-        data: record
-      });
-    } catch (dbError) {
-      console.log('MongoDB not available, using mock data');
-      
-      // Mock record retrieval
-      const mockRecord = {
-        _id: '1',
-        healthId,
-        childName: 'John Doe',
-        age: 5,
-        weight: 18.5,
-        height: 110,
-        parentName: 'Jane Doe',
-        malnutritionSigns: 'None observed',
-        recentIllnesses: 'Common cold last month',
-        timestamp: new Date().toISOString(),
-        uploaded: true,
-        representativeId: 'rep123'
-      };
-
-      res.json({
-        success: true,
-        data: mockRecord
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch child record',
-      message: error.message
-    });
-  }
-});
-
-// GET /api/children/:healthId/booklet - Generate PDF booklet
-router.get('/:healthId/booklet', async (req, res) => {
-  try {
-    const { healthId } = req.params;
-    const { download = 'true' } = req.query;
-
-    // Get child record
-    let childRecord;
-    try {
-      childRecord = await ChildRecord.findOne({ healthId }).lean();
-    } catch (dbError) {
-      // Fallback to mock data
-      childRecord = {
-        _id: '1',
-        healthId,
-        childName: 'John Doe',
-        age: 5,
-        weight: 18.5,
-        height: 110,
-        parentName: 'Jane Doe',
-        malnutritionSigns: 'None observed',
-        recentIllnesses: 'Common cold last month',
-        timestamp: new Date().toISOString(),
-        uploaded: true,
-        representativeId: 'rep123',
-        parentalConsent: true
-      };
-    }
-
-    if (!childRecord) {
-      return res.status(404).json({
-        success: false,
-        error: 'Child record not found',
-        message: `No record found with Health ID: ${healthId}`
-      });
-    }
-
-    // Generate PDF
-    const pdfGenerator = new HealthBookletGenerator();
-    const pdfBuffer = await pdfGenerator.generateBooklet(childRecord);
-
-    // Set response headers
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Length', pdfBuffer.length);
-    
-    if (download === 'true') {
-      res.setHeader('Content-Disposition', `attachment; filename="health-booklet-${healthId}.pdf"`);
-    } else {
-      res.setHeader('Content-Disposition', `inline; filename="health-booklet-${healthId}.pdf"`);
-    }
-
-    // Send PDF
-    res.send(pdfBuffer);
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to generate PDF booklet',
-      message: error.message
-    });
-  }
 });
 
 module.exports = router;
