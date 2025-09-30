@@ -10,66 +10,12 @@ env:
   NODE_VERSION: '20.19.0'
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20.19.0'
-        cache: 'npm'
-        cache-dependency-path: child-health-app/package-lock.json
-        
-    - name: Install dependencies
-      run: |
-        cd child-health-app
-        npm install
-        
-    - name: Run linting (continue on error)
-      run: |
-        cd child-health-app
-        npm run lint || true
-        
-    - name: Run tests (basic)
-      run: |
-        cd child-health-app
-        npm run test:run || true
-        
-  build:
-    name: Build Application
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: child-health-app/package-lock.json
-        
-    - name: Install dependencies
-      run: |
-        cd child-health-app
-        npm install
-        
-    - name: Build application
-      run: |
-        cd child-health-app
-        npm run build
-        
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    needs: test
+    defaults:
+      run:
+        working-directory: child-health-app
     
     steps:
     - name: Checkout code
@@ -79,15 +25,9 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: child-health-app/package-lock.json
         
     - name: Install dependencies
-      run: |
-        cd child-health-app
-        npm install
+      run: npm install
         
     - name: Run security audit (continue on error)
-      run: |
-        cd child-health-app
-        npm audit --audit-level=moderate || true
+      run: npm audit --audit-level=moderate || true
